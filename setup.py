@@ -1,12 +1,14 @@
+#!/usr/bin/env python
+
 import io
 import os
 
 from setuptools import find_packages, setup
 
 # Package meta-data.
-NAME = 'template-python-project'
+NAME = 'lymphoma-subtype-classification'
 DESCRIPTION = 'A short description of the project'
-URL = 'https://github.com/mikelemilia/template-python-project.git'
+URL = 'https://github.com/mikelemilia/lymphoma-subtype-classification.git'
 EMAIL = 'mikele.milia@studenti.unipd.it'
 LICENSE = 'MIT'
 AUTHOR = 'Mikele Milia'
@@ -15,7 +17,11 @@ VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    # 'requests', 'maya', 'records',
+    'keras==2.4.3',
+    'tensorflow==2.4.0',
+    'tensorflow-datasets',
+    'opencv-python==3.4.1.15',
+    'opencv-contrib-python==3.4.1.15',
 ]
 
 # What packages are optional?
@@ -62,7 +68,7 @@ setup(
         ]
     ),
     # If your package is a single module, use this instead of 'packages':
-    # py_modules=['project-name'],
+    # py_modules=['scripts'],
 
     # entry_points={
     #     'console_scripts': ['mycli=mymodule:cli'],
