@@ -18,10 +18,8 @@ VERSION = '0.1.0'
 # What packages are required for this module to be executed?
 REQUIRED = [
     'keras==2.4.3',
-    'tensorflow==2.4.0',
+    'tensorflow==2.3.0',
     'tensorflow-datasets',
-    'opencv-python==3.4.1.15',
-    'opencv-contrib-python==3.4.1.15',
 ]
 
 # What packages are optional?
@@ -68,7 +66,7 @@ setup(
         ]
     ),
     # If your package is a single module, use this instead of 'packages':
-    # py_modules=['scripts'],
+    # py_modules=['src'],
 
     # entry_points={
     #     'console_scripts': ['mycli=mymodule:cli'],
