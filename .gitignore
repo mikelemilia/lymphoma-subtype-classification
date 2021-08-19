@@ -129,5 +129,4 @@ dmypy.json
 
 .idea/
 
-data/
 *.tar.gz

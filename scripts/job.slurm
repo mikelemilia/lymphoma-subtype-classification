@@ -26,7 +26,7 @@ source /nfsd/opt/anaconda3/anaconda3.sh
 conda activate /nfsd/signet/hda_env_gpu
 
 # run code
-srun python $DIRECTORY/main.py -a CNN
+srun python $DIRECTORY/main.py -f /nfsd/hda/ -a CNN
 
 # deactivate environment at the end of the job
 conda deactivate
