@@ -80,7 +80,7 @@ class DeepConvolutional(NeuralNetwork):
             epochs=num_epochs,
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
-            verbose=0,
+            verbose=1,
             callbacks=[best_model_checkpoint, reduce_lr, early_stop]
         )
 

@@ -7,6 +7,7 @@ import pandas as pd
 import tensorflow as tf
 from skimage.io import imread
 from skimage.transform import resize
+from skimage.color import rgb2gray, rgb2hsv
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from tqdm import tqdm
@@ -14,10 +15,12 @@ from tqdm import tqdm
 
 class Dataset:
 
-    def __init__(self, folder, mode):
+    def __init__(self, folder, mode, color_space):
 
+        # Parameter
         self._folder = os.path.join(os.getcwd(), folder)
         self._mode = mode
+        self._color_space = color_space
 
         print('Selected folder : {}'.format(self._folder))
         print('Selected mode : {}'.format(self._mode))
@@ -26,9 +29,14 @@ class Dataset:
         self._classes = []
 
         self._dataframe = None
-        self.generate_dataframe()
 
-        img = self.load_data(123, demo=False)
+        if mode == 'FULL':
+            self.generate_dataframe()
+            img = self.load_data(0)
+        elif mode == 'PATCH':
+            self.generate_subpatches_dataframe()
+            img = self.load_patches_data(0)
+
         self._dim = img.shape
 
     def generate_dataframe(self):
@@ -56,6 +64,28 @@ class Dataset:
 
         # Save dataframe
         self._dataframe.to_csv('dataframe.csv')
+
+    def generate_subpatches_dataframe(self):
+
+        # Generate the starting dataframe
+        self.generate_dataframe()
+
+        # Add the pair [row, col] for each patch
+        names = ['row', 'col']
+        for k in range(2):
+            total = self._dataframe.shape[0]
+            dataframe = pd.DataFrame(np.repeat(self._dataframe.values, 13, axis=0))
+            dataframe.columns = self._dataframe.columns
+            self._dataframe = dataframe
+
+            patch = np.arange(1, 14, 1)
+            patches = np.concatenate((patch, patch))
+            for i in range(total-2):
+                patches = np.concatenate((patches, patch))
+            self._dataframe[names[k]] = patches
+
+        # Save dataframe
+        self._dataframe.to_csv('patch_dataframe.csv')
 
     def extract_tar(self, file):
 
@@ -95,6 +125,8 @@ class Dataset:
 
     def create_dataset(self, dataframe, loader, batch_size, shuffle):
 
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
+
         # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
         data_indexes = list(dataframe.index)
         for i in range(len(data_indexes)):
@@ -122,7 +154,7 @@ class Dataset:
 
         return dataset
 
-    def load_data(self, index, demo=True):
+    def load_data(self, index):
 
         path = self._dataframe.iloc[int(index)]['path']
 
@@ -130,28 +162,64 @@ class Dataset:
         if isinstance(path, bytes):
             path = path.decode()
 
-        original = imread(path)
-
-        # if demo:
-        #     plt.imshow(original)
-        #     plt.show()
+        image = imread(path)
 
         # Resize
         scale_factor = 0.3  # percent of original size
-        height = int(original.shape[0] * scale_factor)
-        width = int(original.shape[1] * scale_factor)
+        height = int(image.shape[0] * scale_factor)
+        width = int(image.shape[1] * scale_factor)
         resized_shape = (height, width, 3)
 
-        resized = resize(image=original, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
+        # Change color space
+        if self._color_space == "GRAY":
+            image = rgb2gray(image)
+            resized_shape = (height, width, 1)
+        elif self._color_space == "HSV":
+            image = rgb2hsv(image)
+
+        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
         # Normalize
         resized = resized / 255.0
 
-        # if demo:
-        #     plt.imshow(resized)
-        #     plt.show()
-
         return np.array(resized, dtype='float32')
+
+    def load_patches_data(self, index):
+
+        path = self._dataframe.iloc[int(index)]['path']
+        row = int(self._dataframe.iloc[int(index)]['row'])
+        col = int(self._dataframe.iloc[int(index)]['col'])
+
+        # Decode needed for the subsequent data loading and extraction of the correspondent file name
+        if isinstance(path, bytes):
+            path = path.decode()
+
+        image = imread(path)
+
+        # Resize
+        scale_factor = 0.3  # percent of original size
+        height = int(image.shape[0] * scale_factor)
+        width = int(image.shape[1] * scale_factor)
+        resized_shape = (height, width, 3)
+
+        # Change color space
+        if self._color_space == "GRAY":
+            image = rgb2gray(image)
+            resized_shape = (height, width, 1)
+        elif self._color_space == "HSV":
+            image = rgb2hsv(image)
+
+        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
+
+        # Normalize
+        resized = resized / 255.0
+
+        resized = np.array(resized)
+
+        # Extract the correct patch from the image
+        patch = resized[(row-1)*24:(row*24), (col-1)*32:(col*32)]
+
+        return np.array(patch, dtype='float32')
 
     def random_plot(self):
 

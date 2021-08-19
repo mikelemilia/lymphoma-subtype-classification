@@ -1,14 +1,10 @@
 from math import sqrt
 
-import matplotlib.pyplot as plt
 from skimage.filters import threshold_multiotsu, sobel
 from skimage.feature import canny, blob_log
-from skimage.exposure import exposure
 from skimage.color import rgb2gray
 from sklearn.decomposition import PCA
 import numpy as np
-
-
 
 def extract_edges(image):
 
@@ -41,3 +37,29 @@ def extract_pca(image, components=2):
 
     print(pc_data.astype(np.float32))
     return pc_data.astype(np.float32)
+
+def extract_wt(matrix):
+    """
+    Extract the approximation component obtained with wavelet decomposition of each channel of each trial inside the
+    data matrix
+
+    :param matrix: data matrix for each the wavelet will be calculated (n.trials x n.channels x n.samples)
+    :return: matrix containing the approximation components of data
+    """
+
+    approx_trials = []
+
+    for trial in matrix:
+        approx = []
+
+        for channel in trial:
+
+            # For the signals coming from each channel, extract the corresponding wavelet decomposition
+
+            ca, _ = pywt.dwt(channel, 'sym9')
+
+            approx.append(ca)
+
+        approx_trials.append(approx)
+
+    return np.array(approx_trials)
