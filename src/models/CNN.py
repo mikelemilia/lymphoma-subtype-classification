@@ -21,8 +21,8 @@ class Convolutional(NeuralNetwork):
         self._batch_size = batch_size
 
         self._name = 'cnn_' + name
-        self._output = 'output/models/{}.h5'.format(self._name)
-        self._best = 'best/models/{}.h5'.format(self._name)
+        self._output = 'output/{}.h5'.format(self._name)
+        self._best = 'best/{}.h5'.format(self._name)
 
         self._model = None
         self._history = None
@@ -58,7 +58,7 @@ class Convolutional(NeuralNetwork):
         self._model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Define callbacks
-        best_model_checkpoint = ModelCheckpoint(self._best, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        # best_model_checkpoint = ModelCheckpoint(self._best, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
         reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
         early_stop = EarlyStopping(monitor='val_accuracy', mode='max', patience=10, verbose=1)
 
@@ -69,7 +69,7 @@ class Convolutional(NeuralNetwork):
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
             verbose=1,
-            callbacks=[best_model_checkpoint, reduce_lr, early_stop]
+            callbacks=[reduce_lr, early_stop]
         )
 
     def save(self):

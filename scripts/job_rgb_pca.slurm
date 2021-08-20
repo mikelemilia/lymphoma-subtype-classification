@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name hda
+#SBATCH --job-name hda_rgb_pca
 #SBATCH --output output_%j.txt
 #SBATCH --error errors_%j.txt
 
@@ -12,11 +12,23 @@
 #SBATCH -n 1
 #SBATCH -c 8
 #SBATCH -p allgroups
-#SBATCH -t 18:00:00
-#SBATCH --mem 20G
+#SBATCH -t 2-00:00:00
+#SBATCH --mem 50G
+
+# Retrieve custom project path
+while getopts m:h option; do
+  case "${option}" in
+  m) MODE=${OPTARG} ;;
+  h) job_help
+     exit ;;
+  *) echo "Command not supported"
+     exit ;;
+  esac
+done
 
 # setup my personal/shared project folder
-DIRECTORY=/home/miliamikel/lymphoma/src
+DIRECTORY=/nfsd/hda/miliamikel/lymph
+DATA=/nfsd/hda/DATASETS/Project_6
 
 # make my folder the current directory
 cd $DIRECTORY
@@ -26,7 +38,9 @@ source /nfsd/opt/anaconda3/anaconda3.sh
 conda activate /nfsd/signet/hda_env_gpu
 
 # run code
-srun python $DIRECTORY/main.py -f /nfsd/hda/ -a CNN
+srun python $DIRECTORY/src/main.py -f $DATA -a CNN -m $MODE -e PCA
+srun python $DIRECTORY/src/main.py -f $DATA -a DNN -m $MODE -e PCA
+srun python $DIRECTORY/src/main.py -f $DATA -a DCNN -m $MODE -e PCA
 
 # deactivate environment at the end of the job
 conda deactivate

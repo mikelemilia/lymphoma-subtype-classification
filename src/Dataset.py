@@ -35,12 +35,12 @@ class Dataset:
 
         self._dataframe = None
 
-        data = None
-
         if mode == 'FULL':
             self.generate_dataframe()
+            data = self.load_data(0)
         elif mode == 'PATCH':
             self.generate_patch_dataframe()
+            data = self.load_patch_data(0)
 
         if self._feature_extracted == 'CANNY':
             data = self.load_data_canny(0)
@@ -48,8 +48,6 @@ class Dataset:
             data = self.load_data_pca(0)
         elif self._feature_extracted == 'WAV':
             data = self.load_data_wavelet(0)
-        elif self._feature_extracted == '':
-            data = self.load_data(0) if mode == 'FULL' else self.load_patch_data(0)
 
         self._dim = data.shape
 
@@ -204,7 +202,7 @@ class Dataset:
         return dataset
 
     def load_data(self, index):
-
+        print("index : ", index)
         path = self._dataframe.iloc[int(index)]['path']
 
         # Decode needed for the subsequent data loading and extraction of the correspondent file name
@@ -238,6 +236,9 @@ class Dataset:
         return np.array(resized, dtype='float32')
 
     def load_data_canny(self, index):
+
+        # print("Extracting CANNY feature from image #{}".format(index))
+
         image = None
         if self._color_space == 'GRAY':
             image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
@@ -255,6 +256,8 @@ class Dataset:
 
     def load_data_pca(self, index, components=32):
 
+        # print("Extracting PCA feature from image #{}".format(index))
+
         image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
 
         x, y, n = image.shape
@@ -265,10 +268,11 @@ class Dataset:
             pca = PCA(n_components=components)  # we need K principal components.
             pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
 
-        # print(pc_image.astype(np.float32))
         return pc_image.astype(np.float32)
 
     def load_data_wavelet(self, index):
+
+        # print("Extracting WAVELET feature from image #{}".format(index))
 
         image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
 
@@ -276,13 +280,22 @@ class Dataset:
 
         approx_channel = []
 
-        for channel in range(n):
-            approx = []
+        if self._color_space == 'HSV':
 
-            # For the image coming from each channel, extract the corresponding wavelet decomposition
-            ca, _ = pywt.dwt(image[:, :, channel], 'sym5')
-            approx.append(ca)
-            approx_channel.append(approx)
+            ca, _ = pywt.dwt(image[:, :, 1], 'sym5')
+            approx_channel.append(ca)
+
+        else:
+
+            for channel in range(n):
+
+                # For the image coming from each channel, extract the corresponding wavelet decomposition
+                ca, _ = pywt.dwt(image[:, :, channel], 'sym5')
+                approx_channel.append(ca)
+
+        n, x, y = np.array(approx_channel).shape
+        approx_channel = np.array(approx_channel).reshape((x, y, n))
+        # print(approx_channel.shape)
 
         return np.array(approx_channel)
 

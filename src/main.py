@@ -65,6 +65,8 @@ if __name__ == '__main__':
 
     data, architecture, mode, color_space, feature_extracted = parse_input()
 
+    name = '{}_{}'.format(mode, color_space) if feature_extracted == '-' else '{}_{}_{}'.format(mode, color_space, feature_extracted)
+
     print('Selected architecture : {}'.format(architecture))
 
     train_dataset = None
@@ -76,17 +78,40 @@ if __name__ == '__main__':
 
     train, val, test = dataset.train_val_test_split()
 
+    # Select loader
+
+    original = None
+    patch = None
+    if feature_extracted == '-':
+        original = dataset.load_data
+        patch = dataset.load_patch_data
+    elif feature_extracted == 'CANNY':
+        original = dataset.load_data_canny
+        patch = dataset.load_data_canny
+    elif feature_extracted == 'PCA':
+        original = dataset.load_data_pca
+        patch = dataset.load_data_pca
+    elif feature_extracted == 'WAV':
+        original = dataset.load_data_wavelet
+        patch = dataset.load_data_wavelet
+    else:
+        print('Feature extraction method not found.', file=sys.stderr)
+        exit(-1)
+
+    batch_size = 32
+
     if mode == 'FULL':
         # # Check dataset
         # dataset.random_plot()
-        train_dataset = dataset.create_dataset(train, loader=dataset.load_data, batch_size=32, shuffle=False)
-        validation_dataset = dataset.create_dataset(val, loader=dataset.load_data, batch_size=32, shuffle=False)
-        test_dataset = dataset.create_dataset(test, loader=dataset.load_data, batch_size=32, shuffle=False)
+        train_dataset = dataset.create_dataset(train, loader=original, batch_size=batch_size, shuffle=False)
+        validation_dataset = dataset.create_dataset(val, loader=original, batch_size=batch_size, shuffle=False)
+        test_dataset = dataset.create_dataset(test, loader=original, batch_size=batch_size, shuffle=False)
     elif mode == 'PATCH':
         # Patches
-        train_dataset = dataset.create_dataset(train, loader=dataset.load_patch_data, batch_size=32, shuffle=False)
-        validation_dataset = dataset.create_dataset(val, loader=dataset.load_patch_data, batch_size=32, shuffle=False)
-        test_dataset = dataset.create_dataset(test, loader=dataset.load_patch_data, batch_size=32, shuffle=False)
+        batch_size = 32
+        train_dataset = dataset.create_dataset(train, loader=patch, batch_size=batch_size, shuffle=False)
+        validation_dataset = dataset.create_dataset(val, loader=patch, batch_size=batch_size, shuffle=False)
+        test_dataset = dataset.create_dataset(test, loader=patch, batch_size=batch_size, shuffle=False)
 
     input_size = dataset.dim
 
@@ -95,24 +120,34 @@ if __name__ == '__main__':
     # Check selected architecture
     if architecture == 'CNN':
 
-        model = CNN(name='baseline', classes=3, shape=input_size, batch_size=32)
+        model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
+        model.build()
+        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // batch_size, len(val) // batch_size])
+        model.save()
+        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
 
     if architecture == 'DNN':
 
-        model = DNN(name='baseline', classes=3, shape=input_size, batch_size=32)
+        model = DNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
+        model.build(units=[512, 256, 128, 64])
+        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // batch_size, len(val) // batch_size])
+        model.save()
+        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
 
     elif architecture == 'D-CNN':
 
-        model = DCNN(name='baseline', classes=3, shape=input_size, batch_size=32)
+        model = DCNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
+        model.build()
+        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20,
+                  steps=[len(train) // batch_size, len(val) // batch_size])
+        model.save()
+        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
 
     elif architecture == 'AE-DNN':
 
-        model = AEDNN(name='baseline', classes=3, shape=input_size, batch_size=32, code_size=512)
+        model = AEDNN(name=name, classes=3, shape=input_size, batch_size=batch_size, code_size=512)
 
-    model.build()
-    model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // 32, len(val) // 32])
-    model.save()
-    # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
+
 
 
 
