@@ -11,6 +11,7 @@ def parse_input():
     a = ''
     m = ''
     c = ''
+    e = ''
 
     # Create parser
     parser = argparse.ArgumentParser(description='3-CLASS LYMPHOMA SUBTYPE CLASSIFICATION')
@@ -20,6 +21,8 @@ def parse_input():
     parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
+    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, BLOB')
+
 
     # Retrieve arguments value
     args = parser.parse_args()
@@ -49,12 +52,18 @@ def parse_input():
     else:
         c = str(args.color).upper()
 
-    return f, a, m, c
+    if str(args.extra).upper() not in ['-', 'CANNY', 'PCA', 'WAV']:
+        print('You must select a valid feature extraction. Valid options are: CANNY, PCA, WAV', file=sys.stderr)
+        exit(-1)
+    else:
+        e = str(args.extra).upper()
+
+    return f, a, m, c, e
 
 
 if __name__ == '__main__':
 
-    data, architecture, mode, color_space = parse_input()
+    data, architecture, mode, color_space, feature_extracted = parse_input()
 
     print('Selected architecture : {}'.format(architecture))
 
@@ -63,11 +72,9 @@ if __name__ == '__main__':
     test_dataset = None
 
     # Dataset initialization
-    dataset = Dataset(folder=data, mode=mode, color_space=color_space)
+    dataset = Dataset(folder=data, mode=mode, color_space=color_space, feature=feature_extracted)
 
     train, val, test = dataset.train_val_test_split()
-
-
 
     if mode == 'FULL':
         # # Check dataset
@@ -77,9 +84,9 @@ if __name__ == '__main__':
         test_dataset = dataset.create_dataset(test, loader=dataset.load_data, batch_size=32, shuffle=False)
     elif mode == 'PATCH':
         # Patches
-        train_dataset = dataset.create_dataset(train, loader=dataset.load_patches_data, batch_size=32, shuffle=False)
-        validation_dataset = dataset.create_dataset(val, loader=dataset.load_patches_data, batch_size=32, shuffle=False)
-        test_dataset = dataset.create_dataset(test, loader=dataset.load_patches_data, batch_size=32, shuffle=False)
+        train_dataset = dataset.create_dataset(train, loader=dataset.load_patch_data, batch_size=32, shuffle=False)
+        validation_dataset = dataset.create_dataset(val, loader=dataset.load_patch_data, batch_size=32, shuffle=False)
+        test_dataset = dataset.create_dataset(test, loader=dataset.load_patch_data, batch_size=32, shuffle=False)
 
     input_size = dataset.dim
 

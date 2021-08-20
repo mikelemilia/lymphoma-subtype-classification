@@ -4,10 +4,14 @@ import tarfile
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pywt
 import tensorflow as tf
+from skimage.color import rgb2gray, rgb2hsv
+from skimage.feature import canny
+from skimage.filters import threshold_multiotsu
 from skimage.io import imread
 from skimage.transform import resize
-from skimage.color import rgb2gray, rgb2hsv
+from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from tqdm import tqdm
@@ -15,12 +19,13 @@ from tqdm import tqdm
 
 class Dataset:
 
-    def __init__(self, folder, mode, color_space):
+    def __init__(self, folder, mode, color_space, feature):
 
         # Parameter
         self._folder = os.path.join(os.getcwd(), folder)
         self._mode = mode
         self._color_space = color_space
+        self._feature_extracted = feature
 
         print('Selected folder : {}'.format(self._folder))
         print('Selected mode : {}'.format(self._mode))
@@ -30,14 +35,23 @@ class Dataset:
 
         self._dataframe = None
 
+        data = None
+
         if mode == 'FULL':
             self.generate_dataframe()
-            img = self.load_data(0)
         elif mode == 'PATCH':
-            self.generate_subpatches_dataframe()
-            img = self.load_patches_data(0)
+            self.generate_patch_dataframe()
 
-        self._dim = img.shape
+        if self._feature_extracted == 'CANNY':
+            data = self.load_data_canny(0)
+        elif self._feature_extracted == 'PCA':
+            data = self.load_data_pca(0)
+        elif self._feature_extracted == 'WAV':
+            data = self.load_data_wavelet(0)
+        elif self._feature_extracted == '':
+            data = self.load_data(0) if mode == 'FULL' else self.load_patch_data(0)
+
+        self._dim = data.shape
 
     def generate_dataframe(self):
 
@@ -65,7 +79,7 @@ class Dataset:
         # Save dataframe
         self._dataframe.to_csv('dataframe.csv')
 
-    def generate_subpatches_dataframe(self):
+    def generate_patch_dataframe(self):
 
         # Generate the starting dataframe
         self.generate_dataframe()
@@ -80,7 +94,7 @@ class Dataset:
 
             patch = np.arange(1, 14, 1)
             patches = np.concatenate((patch, patch))
-            for i in range(total-2):
+            for i in range(total - 2):
                 patches = np.concatenate((patches, patch))
             self._dataframe[names[k]] = patches
 
@@ -154,6 +168,41 @@ class Dataset:
 
         return dataset
 
+    def create_dataset_nolabel(self, dataframe, loader, batch_size, shuffle):
+        # Creation of the dataset of type data - data for autoencoders
+
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
+        # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
+        data_indexes_in = list(dataframe.index)
+        for i in range(len(data_indexes_in)):
+            data_indexes_in[i] = str(data_indexes_in[i])
+
+        data_indexes_out = data_indexes_in
+
+        # Creation of the dataset with indexes and label
+        dataset = tf.data.Dataset.from_tensor_slices((data_indexes_in, data_indexes_out))
+
+        # Application of the function passed in input to every data index (from the index, data is extracted and if
+        # necessary a feature is extracted with 'function' (equal for both the data present)
+
+        # Application of the function passed in input to every data index (from the index,
+        # data is extracted and if necessary a feature is extracted with 'loader'
+        dataset = dataset.map(
+            lambda index_in, index_out: (tf.numpy_function(loader, [index_in], np.float32), tf.numpy_function(loader, [index_out], np.float32)),
+            num_parallel_calls=os.cpu_count()
+        )
+
+        if shuffle:
+            dataset = dataset.shuffle(len(data_indexes_in))
+        dataset = dataset.repeat()
+
+        # Operations for shuffling and batching of the dataset
+
+        dataset = dataset.batch(batch_size=batch_size)
+        dataset = dataset.prefetch(buffer_size=1)
+
+        return dataset
+
     def load_data(self, index):
 
         path = self._dataframe.iloc[int(index)]['path']
@@ -168,14 +217,18 @@ class Dataset:
         scale_factor = 0.3  # percent of original size
         height = int(image.shape[0] * scale_factor)
         width = int(image.shape[1] * scale_factor)
-        resized_shape = (height, width, 3)
 
-        # Change color space
+        # Pre-process the image
         if self._color_space == "GRAY":
             image = rgb2gray(image)
-            resized_shape = (height, width, 1)
         elif self._color_space == "HSV":
             image = rgb2hsv(image)
+
+        # due to the pre-process check the right number of channels
+        if len(image.shape) > 2:
+            resized_shape = (height, width, image.shape[2])
+        else:
+            resized_shape = (height, width, 1)
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
@@ -184,7 +237,56 @@ class Dataset:
 
         return np.array(resized, dtype='float32')
 
-    def load_patches_data(self, index):
+    def load_data_canny(self, index):
+        image = None
+        if self._color_space == 'GRAY':
+            image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+        elif self._color_space == 'HSV':
+            image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+            image = image[:, :, 1]  # extract only Saturation channel
+        elif self._color_space == 'RGB':
+            image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+            image = rgb2gray(image)
+
+        low, high = threshold_multiotsu(image=image)
+        edges = canny(image, sigma=1, low_threshold=low, high_threshold=high)
+
+        return edges
+
+    def load_data_pca(self, index, components=32):
+
+        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+
+        x, y, n = image.shape
+
+        # Extraction of the first 'components' principal components of the images
+        pc_image = np.zeros([image.shape[0], components, n])
+        for i in range(n):
+            pca = PCA(n_components=components)  # we need K principal components.
+            pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
+
+        # print(pc_image.astype(np.float32))
+        return pc_image.astype(np.float32)
+
+    def load_data_wavelet(self, index):
+
+        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+
+        _, _, n = image.shape
+
+        approx_channel = []
+
+        for channel in range(n):
+            approx = []
+
+            # For the image coming from each channel, extract the corresponding wavelet decomposition
+            ca, _ = pywt.dwt(image[:, :, channel], 'sym5')
+            approx.append(ca)
+            approx_channel.append(approx)
+
+        return np.array(approx_channel)
+
+    def load_patch_data(self, index):
 
         path = self._dataframe.iloc[int(index)]['path']
         row = int(self._dataframe.iloc[int(index)]['row'])
@@ -200,16 +302,20 @@ class Dataset:
         scale_factor = 0.3  # percent of original size
         height = int(image.shape[0] * scale_factor)
         width = int(image.shape[1] * scale_factor)
-        resized_shape = (height, width, 3)
 
-        # Change color space
+        # Pre-process the image
         if self._color_space == "GRAY":
             image = rgb2gray(image)
-            resized_shape = (height, width, 1)
         elif self._color_space == "HSV":
             image = rgb2hsv(image)
 
-        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
+        # due to the pre-process check the right number of channels
+        if len(image.shape) > 2:
+            resized_shape = (height, width, image.shape[2])
+        else:
+            resized_shape = (height, width, 1)
+
+        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
 
         # Normalize
         resized = resized / 255.0
@@ -217,7 +323,7 @@ class Dataset:
         resized = np.array(resized)
 
         # Extract the correct patch from the image
-        patch = resized[(row-1)*24:(row*24), (col-1)*32:(col*32)]
+        patch = resized[(row - 1) * 24:(row * 24), (col - 1) * 32:(col * 32)]
 
         return np.array(patch, dtype='float32')
 
