@@ -13,7 +13,7 @@ from skimage.io import imread
 from skimage.transform import resize
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, normalize
 from tqdm import tqdm
 
 
@@ -135,7 +135,7 @@ class Dataset:
 
         return train, val, test
 
-    def create_dataset(self, dataframe, loader, batch_size, shuffle):
+    def create_dataset(self, dataframe, loader, batch_size, shuffle=False):
 
         dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
 
@@ -181,10 +181,7 @@ class Dataset:
         dataset = tf.data.Dataset.from_tensor_slices((data_indexes_in, data_indexes_out))
 
         # Application of the function passed in input to every data index (from the index, data is extracted and if
-        # necessary a feature is extracted with 'function' (equal for both the data present)
-
-        # Application of the function passed in input to every data index (from the index,
-        # data is extracted and if necessary a feature is extracted with 'loader'
+        # necessary a feature is extracted with 'loader' (equal for both the data present)
         dataset = dataset.map(
             lambda index_in, index_out: (tf.numpy_function(loader, [index_in], np.float32), tf.numpy_function(loader, [index_out], np.float32)),
             num_parallel_calls=os.cpu_count()
@@ -202,7 +199,6 @@ class Dataset:
         return dataset
 
     def load_data(self, index):
-        print("index : ", index)
         path = self._dataframe.iloc[int(index)]['path']
 
         # Decode needed for the subsequent data loading and extraction of the correspondent file name
@@ -230,8 +226,9 @@ class Dataset:
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
-        # Normalize
-        resized = resized / 255.0
+        # Standardize
+        for i in range(resized_shape[2]):
+            resized[:, :, i] = normalize(resized[:, :, i])
 
         return np.array(resized, dtype='float32')
 
@@ -330,8 +327,9 @@ class Dataset:
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
 
-        # Normalize
-        resized = resized / 255.0
+        # Standardize
+        for i in range(resized_shape[2]):
+            resized[:, :, i] = normalize(resized[:, :, i])
 
         resized = np.array(resized)
 

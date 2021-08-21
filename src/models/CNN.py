@@ -9,6 +9,8 @@ from tensorflow.keras import Input, Model
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.layers import Conv2D, BatchNormalization, Activation, Dropout, Flatten, Dense, MaxPool2D
 
+from tensorflow.keras.layers.experimental.preprocessing import RandomFlip, RandomRotation
+
 from .Network import NeuralNetwork
 
 
@@ -45,7 +47,14 @@ class Convolutional(NeuralNetwork):
 
         x = MaxPool2D(pool_size=2)(x)
         x = Flatten()(x)
-        x = Dense(self._classes, activation='sigmoid', name='fc')(x)
+        x = Dense(512, name='fc512')(x)
+        x = Activation('relu')(x)
+        x = Dropout(rate=0.1)(x)
+        x = Dense(128, name='fc128')(x)
+        x = Activation('relu')(x)
+        x = Dropout(rate=0.1)(x)
+
+        x = Dense(self._classes, activation='softmax', name='fc')(x)
 
         self._model = Model(inputs=x_input, outputs=x, name=self._name)
 
@@ -59,7 +68,7 @@ class Convolutional(NeuralNetwork):
 
         # Define callbacks
         # best_model_checkpoint = ModelCheckpoint(self._best, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-        reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
+        # reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
         early_stop = EarlyStopping(monitor='val_accuracy', mode='max', patience=10, verbose=1)
 
         self._history = self._model.fit(
@@ -69,7 +78,7 @@ class Convolutional(NeuralNetwork):
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
             verbose=1,
-            callbacks=[reduce_lr, early_stop]
+            callbacks=[early_stop]
         )
 
     def save(self):

@@ -1,23 +1,20 @@
 #!/bin/bash
 
-# Local variable
-MODE=("full" "patch")
+echo "Submitted NN without feature extracted"
+sbatch original.slurm
+sbatch patched.slurm
 
-# Move into build folder
-for mode in "${MODE[@]}"; do
+echo ""
+echo "Submitted NN with CANNY"
+sbatch original_can.slurm
+sbatch patched_can.slurm
 
-  if [ "$mode" == "full" ]; then
-    sbatch job_rgb.slurm -m "FULL"
-    sbatch job_hsv.slurm -m "FULL"
-    sbatch job_gray.slurm -m "FULL"
+echo ""
+echo "Submitted NN with PCA"
+sbatch original_pca.slurm
+sbatch patched_pca.slurm
 
-  elif [ "$mode" == "patch" ]; then
-    sbatch job_rgb.slurm -m "PATCH"
-    sbatch job_hsv.slurm -m "PATCH"
-    sbatch job_gray.slurm -m "PATCH"
-
-  else
-    echo "Mode not found"
-
-  fi
-done
+echo ""
+echo "Submitted NN with WAV"
+sbatch original_wav.slurm
+sbatch patched_wav.slurm

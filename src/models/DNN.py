@@ -27,16 +27,16 @@ class Deep(NeuralNetwork):
         self._model = None
         self._history = None
 
-    def build(self, units):
+    def build(self, hidden_units):
 
         x_input = Input(self._shape, name='input')
 
         x = Flatten()(x_input)
 
-        for i, unit in enumerate(units):
-            x = Dense(units=unit, activation='relu', name='fc{}'.format(i))(x)
+        for i, units in enumerate(hidden_units):
+            x = Dense(units=units, activation='relu', name='fc{}'.format(i))(x)
 
-        x = Dense(units=self._classes, activation='sigmoid', name='fc')(x)
+        x = Dense(units=self._classes, activation='softmax', name='fc')(x)
 
         self._model = Model(inputs=x_input, outputs=x, name=self._name)
 
@@ -50,7 +50,7 @@ class Deep(NeuralNetwork):
 
         # Define callbacks
         # best_model_checkpoint = ModelCheckpoint(self._best, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-        reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
+        # reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
         early_stop = EarlyStopping(monitor='val_accuracy', mode='max', patience=10, verbose=1)
 
         self._history = self._model.fit(
@@ -60,7 +60,7 @@ class Deep(NeuralNetwork):
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
             verbose=1,
-            callbacks=[reduce_lr, early_stop]
+            callbacks=[early_stop]
         )
 
     def save(self):

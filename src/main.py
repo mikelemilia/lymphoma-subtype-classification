@@ -23,7 +23,6 @@ def parse_input():
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
     parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, BLOB')
 
-
     # Retrieve arguments value
     args = parser.parse_args()
 
@@ -79,9 +78,9 @@ if __name__ == '__main__':
     train, val, test = dataset.train_val_test_split()
 
     # Select loader
-
     original = None
     patch = None
+
     if feature_extracted == '-':
         original = dataset.load_data
         patch = dataset.load_patch_data
@@ -98,11 +97,12 @@ if __name__ == '__main__':
         print('Feature extraction method not found.', file=sys.stderr)
         exit(-1)
 
-    batch_size = 32
+    batch_size = 0
 
     if mode == 'FULL':
         # # Check dataset
         # dataset.random_plot()
+        batch_size = 16
         train_dataset = dataset.create_dataset(train, loader=original, batch_size=batch_size, shuffle=False)
         validation_dataset = dataset.create_dataset(val, loader=original, batch_size=batch_size, shuffle=False)
         test_dataset = dataset.create_dataset(test, loader=original, batch_size=batch_size, shuffle=False)
@@ -114,6 +114,7 @@ if __name__ == '__main__':
         test_dataset = dataset.create_dataset(test, loader=patch, batch_size=batch_size, shuffle=False)
 
     input_size = dataset.dim
+    num_epochs = 50
 
     model = None
 
@@ -122,15 +123,15 @@ if __name__ == '__main__':
 
         model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
         model.build()
-        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // batch_size, len(val) // batch_size])
+        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs, steps=[len(train) // batch_size, len(val) // batch_size])
         model.save()
         # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
 
     if architecture == 'DNN':
 
         model = DNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
-        model.build(units=[512, 256, 128, 64])
-        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // batch_size, len(val) // batch_size])
+        model.build(hidden_units=[512, 256, 128, 64])
+        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs, steps=[len(train) // batch_size, len(val) // batch_size])
         model.save()
         # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
 
@@ -138,7 +139,7 @@ if __name__ == '__main__':
 
         model = DCNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
         model.build()
-        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20,
+        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
                   steps=[len(train) // batch_size, len(val) // batch_size])
         model.save()
         # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
