@@ -130,3 +130,6 @@ dmypy.json
 .idea/
 
 *.tar.gz
+
+results
+output

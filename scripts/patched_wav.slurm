@@ -11,7 +11,9 @@
 #SBATCH -c 8
 #SBATCH -p allgroups
 #SBATCH -t 7-00:00:00
-#SBATCH --mem 200G
+#SBATCH --mem 50G
+
+#SBATCH --gres=gpu:1
 
 # setup my personal/shared project folder
 DIRECTORY=/nfsd/hda/miliamikel/lymph

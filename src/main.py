@@ -21,7 +21,7 @@ def parse_input():
     parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
-    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, BLOB')
+    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, WAV, BLOB')
 
     # Retrieve arguments value
     args = parser.parse_args()
@@ -51,8 +51,8 @@ def parse_input():
     else:
         c = str(args.color).upper()
 
-    if str(args.extra).upper() not in ['-', 'CANNY', 'PCA', 'WAV']:
-        print('You must select a valid feature extraction. Valid options are: CANNY, PCA, WAV', file=sys.stderr)
+    if str(args.extra).upper() not in ['-', 'CANNY', 'PCA', 'WAV', 'BLOB']:
+        print('You must select a valid feature extraction. Valid options are: CANNY, PCA, WAV, BLOB', file=sys.stderr)
         exit(-1)
     else:
         e = str(args.extra).upper()
@@ -87,6 +87,9 @@ if __name__ == '__main__':
     elif feature_extracted == 'CANNY':
         original = dataset.load_data_canny
         patch = dataset.load_data_canny
+    elif feature_extracted == 'BLOB':
+        original = dataset.load_data_blob
+        patch = dataset.load_data_blob
     elif feature_extracted == 'PCA':
         original = dataset.load_data_pca
         patch = dataset.load_data_pca
@@ -122,26 +125,34 @@ if __name__ == '__main__':
     if architecture == 'CNN':
 
         model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
-        model.build()
-        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs, steps=[len(train) // batch_size, len(val) // batch_size])
-        model.save()
-        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
+
+        if not model.is_loaded:
+            model.build()
+            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // batch_size, len(val) // batch_size])
+            model.save()
+
+        model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
 
     if architecture == 'DNN':
 
         model = DNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
-        model.build(hidden_units=[512, 256, 128, 64])
-        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs, steps=[len(train) // batch_size, len(val) // batch_size])
-        model.save()
-        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
+
+        if not model.is_loaded:
+            model.build(hidden_units=[512, 256, 128, 64])
+            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs, steps=[len(train) // batch_size, len(val) // batch_size])
+            model.save()
+
+        model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
 
     elif architecture == 'D-CNN':
 
         model = DCNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
-        model.build()
-        model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
-                  steps=[len(train) // batch_size, len(val) // batch_size])
-        model.save()
+
+        if not model.is_loaded:
+            model.build()
+            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
+                      steps=[len(train) // batch_size, len(val) // batch_size])
+            model.save()
         # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
 
     elif architecture == 'AE-DNN':

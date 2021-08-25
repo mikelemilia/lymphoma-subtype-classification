@@ -13,6 +13,8 @@
 #SBATCH -t 7-00:00:00
 #SBATCH --mem 200G
 
+#SBATCH --gres=gpu:1
+
 # setup my personal/shared project folder
 DIRECTORY=/nfsd/hda/miliamikel/lymph
 DATA=/nfsd/hda/DATASETS/Project_6
@@ -20,7 +22,7 @@ DATA=/nfsd/hda/DATASETS/Project_6
 # make my folder the current directory
 cd $DIRECTORY
 
-# setup python3 environment for machine learning computations 
+# setup python3 environment for machine learning computations
 source /nfsd/opt/anaconda3/anaconda3.sh
 conda activate /nfsd/signet/hda_env_gpu
 

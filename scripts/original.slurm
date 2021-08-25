@@ -11,7 +11,9 @@
 #SBATCH -c 8
 #SBATCH -p allgroups
 #SBATCH -t 7-00:00:00
-#SBATCH --mem 200G
+#SBATCH --mem 250G
+
+#SBATCH --gres=gpu:1
 
 # setup my personal/shared project folder
 DIRECTORY=/nfsd/hda/miliamikel/lymph
@@ -31,17 +33,23 @@ srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL
 srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c HSV -m FULL
 srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c GRAY -m FULL
 
+srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL -e BLOB
+
 echo "Running DNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c HSV -m FULL
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c GRAY -m FULL
 
+srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL -e BLOB
+
 echo "Running D-CNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m FULL
 srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c HSV -m FULL
 srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c GRAY -m FULL
+
+srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m FULL -e BLOB
 
 # deactivate environment at the end of the job
 conda deactivate

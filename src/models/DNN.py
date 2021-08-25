@@ -24,10 +24,18 @@ class Deep(NeuralNetwork):
         self._output = 'output/{}.h5'.format(self._name)
         self._best = 'best/{}.h5'.format(self._name)
 
+        self._loaded = False
+
+        if os.path.exists(self._output):
+            self._model = keras.models.load_model(self._output)
+            self._loaded = True
+
         self._model = None
         self._history = None
 
     def build(self, hidden_units):
+
+        print("Model build ...")
 
         x_input = Input(self._shape, name='input')
 
@@ -44,6 +52,8 @@ class Deep(NeuralNetwork):
         self._model.summary()
 
     def fit(self, train, validation, num_epochs, steps: list):
+
+        print("Model fit ...")
 
         # Compile model
         self._model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
@@ -65,20 +75,17 @@ class Deep(NeuralNetwork):
 
     def save(self):
 
+        print("Model save ...")
+
         self._model.save(self._output)
         print('Model saved!')
 
     def predict(self, test, labels, steps):
 
-        # Load saved model
-        if self._model is None and os.path.exists(self._output):
-            self._model = keras.models.load_model(self._output)
-        else:
-            print('Unable to locate the saved .h5 model', file=sys.stderr)
-            exit(-1)
+        print("Model predict ...")
 
         # Extract labels of test set, predict them with the model
-        prediction = self._model.predict(test, steps=steps)
+        prediction = self._model.predict(test)
         test_est_classes = (prediction > 0.5).astype(int)
 
         # Determine performance scores
@@ -130,3 +137,7 @@ class Deep(NeuralNetwork):
         #         axs[l, 1].set_ylabel('True Positive Rate')
         #         axs[l, 1].set_title('ROC for {}'.format(label[l]))
         # plt.savefig('images/{}_evaluation'.format(title))
+
+    @property
+    def is_loaded(self):
+        return self._loaded

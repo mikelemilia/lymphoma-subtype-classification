@@ -24,46 +24,55 @@ class DeepConvolutional(NeuralNetwork):
         self._output = 'output/{}.h5'.format(self._name)
         self._best = 'best/{}.h5'.format(self._name)
 
+        self._loaded = False
+
+        if os.path.exists(self._output):
+            self._model = keras.models.load_model(self._output)
+            self._loaded = True
+
         self._model = None
         self._history = None
 
     def build(self):
 
+        print("Model build ...")
+
         x_input = Input(self._shape, name='input')
 
         # Layer with 64x64 Conv2D
         x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', use_bias=True, padding='same', name='conv64')(x_input)
-        x = BatchNormalization(axis=-1, name='bn64')(x)
+        # x = BatchNormalization(axis=-1, name='bn64')(x)
         x = Activation('relu')(x)
         x = Dropout(rate=0.2)(x)
 
         # Layer with 128x128 Conv2D
         x = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', use_bias=True, padding='same', name='conv128')(x)
-        x = BatchNormalization(axis=-1, name='bn128')(x)
+        # x = BatchNormalization(axis=-1, name='bn128')(x)
         x = Activation('relu')(x)
         x = Dropout(rate=0.2)(x)
 
         # Layer with 256x256 Conv2D
         x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', use_bias=True, padding='same', name='conv256')(x)
-        x = BatchNormalization(axis=-1, name='bn256')(x)
+        # x = BatchNormalization(axis=-1, name='bn256')(x)
         x = Activation('relu')(x)
         x = Dropout(rate=0.2)(x)
 
         # Layer with 512x512 Conv2D
         x = Conv2D(filters=512, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', use_bias=True, padding='same', name='conv512')(x)
-        x = BatchNormalization(axis=-1, name='bn512')(x)
+        # x = BatchNormalization(axis=-1, name='bn512')(x)
         x = Activation('relu')(x)
         x = Dropout(rate=0.2)(x)
 
         x = MaxPool2D(pool_size=2)(x)
         x = Flatten()(x)
-        x = Dense(1024, name='fc1024')(x)
-        x = Activation('relu')(x)
-        x = Dropout(rate=0.1)(x)
-        x = Dense(1024, name='fc1024')(x)
-        x = Activation('relu')(x)
-        x = Dropout(rate=0.1)(x)
+
         x = Dense(256, name='fc256')(x)
+        x = Activation('relu')(x)
+        x = Dropout(rate=0.1)(x)
+        x = Dense(128, name='fc128')(x)
+        x = Activation('relu')(x)
+        x = Dropout(rate=0.1)(x)
+        x = Dense(64, name='fc64')(x)
         x = Activation('relu')(x)
         x = Dropout(rate=0.1)(x)
 
@@ -75,6 +84,8 @@ class DeepConvolutional(NeuralNetwork):
         self._model.summary()
 
     def fit(self, train, validation, num_epochs, steps: list):
+
+        print("Model fit ...")
 
         # Compile model
         self._model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
@@ -96,20 +107,17 @@ class DeepConvolutional(NeuralNetwork):
 
     def save(self):
 
+        print("Model save ...")
+
         self._model.save(self._output)
         print('Model saved!')
 
-    def predict(self, test, labels, steps):
+    def predict(self, test, labels):
 
-        # Load saved model
-        if self._model is None and os.path.exists(self._output):
-            self._model = keras.models.load_model(self._output)
-        else:
-            print('Unable to locate the saved .h5 model', file=sys.stderr)
-            exit(-1)
+        print("Model predict ...")
 
         # Extract labels of test set, predict them with the model
-        prediction = self._model.predict(test, steps=steps)
+        prediction = self._model.predict(test)
         test_est_classes = (prediction > 0.5).astype(int)
 
         # Determine performance scores
@@ -161,3 +169,7 @@ class DeepConvolutional(NeuralNetwork):
         #         axs[l, 1].set_ylabel('True Positive Rate')
         #         axs[l, 1].set_title('ROC for {}'.format(label[l]))
         # plt.savefig('images/{}_evaluation'.format(title))
+
+    @property
+    def is_loaded(self):
+        return self._loaded

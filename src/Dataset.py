@@ -6,9 +6,10 @@ import numpy as np
 import pandas as pd
 import pywt
 import tensorflow as tf
-from skimage.color import rgb2gray, rgb2hsv
-from skimage.feature import canny
-from skimage.filters import threshold_multiotsu
+from skimage.color import rgb2hsv, rgb2gray
+from skimage.feature import canny, blob_log
+from skimage.filters import threshold_multiotsu, gaussian
+from skimage.morphology import erosion, dilation
 from skimage.io import imread
 from skimage.transform import resize
 from sklearn.decomposition import PCA
@@ -34,6 +35,7 @@ class Dataset:
         self._classes = []
 
         self._dataframe = None
+        data = None
 
         if mode == 'FULL':
             self.generate_dataframe()
@@ -48,6 +50,8 @@ class Dataset:
             data = self.load_data_pca(0)
         elif self._feature_extracted == 'WAV':
             data = self.load_data_wavelet(0)
+        elif self._feature_extracted == 'BLOB':
+            data = self.load_data_blob(0)
 
         self._dim = data.shape
 
@@ -84,16 +88,20 @@ class Dataset:
 
         # Add the pair [row, col] for each patch
         names = ['row', 'col']
+        dims = [13, 13]
         for k in range(2):
-            total = self._dataframe.shape[0]
-            dataframe = pd.DataFrame(np.repeat(self._dataframe.values, 13, axis=0))
+            row = self._dataframe.shape[0]
+
+            dataframe = pd.DataFrame(np.repeat(self._dataframe.values, dims[k], axis=0))
             dataframe.columns = self._dataframe.columns
             self._dataframe = dataframe
 
-            patch = np.arange(1, 14, 1)
+            patch = np.arange(1, dims[k] + 1, 1)
             patches = np.concatenate((patch, patch))
-            for i in range(total - 2):
+
+            for i in range(row - 2):
                 patches = np.concatenate((patches, patch))
+
             self._dataframe[names[k]] = patches
 
         # Save dataframe
@@ -159,7 +167,7 @@ class Dataset:
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes))
-        dataset = dataset.repeat()
+        # dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
@@ -189,7 +197,7 @@ class Dataset:
 
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes_in))
-        dataset = dataset.repeat()
+        # dataset = dataset.repeat()
 
         # Operations for shuffling and batching of the dataset
 
@@ -205,24 +213,23 @@ class Dataset:
         if isinstance(path, bytes):
             path = path.decode()
 
-        image = imread(path)
+        # Load the image the image
+        image = None
+        if self._color_space == "RGB":
+            image = imread(path)
+        elif self._color_space == "GRAY":
+            image = imread(path, as_gray=True)
+            image = np.expand_dims(image, axis=-1)
+        elif self._color_space == "HSV":
+            image = imread(path)
+            image = rgb2hsv(image)
 
         # Resize
-        scale_factor = 0.3  # percent of original size
+        scale_factor = 0.1  # percent of original size
         height = int(image.shape[0] * scale_factor)
         width = int(image.shape[1] * scale_factor)
 
-        # Pre-process the image
-        if self._color_space == "GRAY":
-            image = rgb2gray(image)
-        elif self._color_space == "HSV":
-            image = rgb2hsv(image)
-
-        # due to the pre-process check the right number of channels
-        if len(image.shape) > 2:
-            resized_shape = (height, width, image.shape[2])
-        else:
-            resized_shape = (height, width, 1)
+        resized_shape = (height, width, image.shape[2])
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
@@ -232,24 +239,81 @@ class Dataset:
 
         return np.array(resized, dtype='float32')
 
+    def load_patch_data(self, index):
+
+        path = self._dataframe.iloc[int(index)]['path']
+        row = int(self._dataframe.iloc[int(index)]['row'])
+        col = int(self._dataframe.iloc[int(index)]['col'])
+
+        # Decode needed for the subsequent data loading and extraction of the correspondent file name
+        if isinstance(path, bytes):
+            path = path.decode()
+
+        # Load the image the image
+        image = None
+        if self._color_space == "RGB":
+            image = imread(path)
+        elif self._color_space == "GRAY":
+            image = imread(path, as_gray=True)
+            image = np.expand_dims(image, axis=-1)
+        elif self._color_space == "HSV":
+            image = imread(path)
+            image = rgb2hsv(image)
+
+        # Resize
+        scale_factor = 0.5  # percent of original size
+        height = int(image.shape[0] * scale_factor)
+        width = int(image.shape[1] * scale_factor)
+
+        resized_shape = (height, width, image.shape[2])
+
+        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
+
+        # Standardize
+        for i in range(resized_shape[2]):
+            resized[:, :, i] = normalize(resized[:, :, i])
+
+        resized = np.array(resized)
+
+        # Extract the correct patch from the image
+        patch = resized[(row - 1) * 40:(row * 40), (col - 1) * 53:(col * 53)]
+
+        return np.array(patch, dtype='float32')
+
     def load_data_canny(self, index):
 
         # print("Extracting CANNY feature from image #{}".format(index))
 
-        image = None
-        if self._color_space == 'GRAY':
-            image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
-        elif self._color_space == 'HSV':
-            image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
-            image = image[:, :, 1]  # extract only Saturation channel
+        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+
+        for i in range(image.shape[2]):
+            blur = gaussian(image[:, :, i], sigma=0.4, truncate=3.5)
+            low, high = threshold_multiotsu(image=blur)
+            image[:, :, i] = canny(blur, sigma=1, low_threshold=low, high_threshold=high)
+
+        # plt.imshow(image)
+        # plt.show()
+
+        return image
+
+    def load_data_blob(self, index):
+
+        # print("Extracting BLOB feature from image #{}".format(index))
+
+        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+
+        if self._color_space == 'HSV':
+            gray = image[:, :, 1]  # saturation channel
         elif self._color_space == 'RGB':
-            image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
-            image = rgb2gray(image)
+            gray = rgb2gray(image)
+        else:
+            gray = image
 
-        low, high = threshold_multiotsu(image=image)
-        edges = canny(image, sigma=1, low_threshold=low, high_threshold=high)
+        binarized = gray < 0.025
 
-        return edges
+        binarized = np.expand_dims(binarized, -1)
+
+        return np.array(binarized, dtype='float32')
 
     def load_data_pca(self, index, components=32):
 
@@ -279,7 +343,9 @@ class Dataset:
 
         if self._color_space == 'HSV':
 
-            ca, _ = pywt.dwt(image[:, :, 1], 'sym5')
+            ca, _ = pywt.dwt(image[:, :, 0], 'sym5')    # hue
+            approx_channel.append(ca)
+            ca, _ = pywt.dwt(image[:, :, 2], 'sym5')    # val
             approx_channel.append(ca)
 
         else:
@@ -295,48 +361,6 @@ class Dataset:
         # print(approx_channel.shape)
 
         return np.array(approx_channel)
-
-    def load_patch_data(self, index):
-
-        path = self._dataframe.iloc[int(index)]['path']
-        row = int(self._dataframe.iloc[int(index)]['row'])
-        col = int(self._dataframe.iloc[int(index)]['col'])
-
-        # Decode needed for the subsequent data loading and extraction of the correspondent file name
-        if isinstance(path, bytes):
-            path = path.decode()
-
-        image = imread(path)
-
-        # Resize
-        scale_factor = 0.3  # percent of original size
-        height = int(image.shape[0] * scale_factor)
-        width = int(image.shape[1] * scale_factor)
-
-        # Pre-process the image
-        if self._color_space == "GRAY":
-            image = rgb2gray(image)
-        elif self._color_space == "HSV":
-            image = rgb2hsv(image)
-
-        # due to the pre-process check the right number of channels
-        if len(image.shape) > 2:
-            resized_shape = (height, width, image.shape[2])
-        else:
-            resized_shape = (height, width, 1)
-
-        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
-
-        # Standardize
-        for i in range(resized_shape[2]):
-            resized[:, :, i] = normalize(resized[:, :, i])
-
-        resized = np.array(resized)
-
-        # Extract the correct patch from the image
-        patch = resized[(row - 1) * 24:(row * 24), (col - 1) * 32:(col * 32)]
-
-        return np.array(patch, dtype='float32')
 
     def random_plot(self):
 
