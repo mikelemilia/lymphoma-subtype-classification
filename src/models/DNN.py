@@ -1,5 +1,6 @@
 import os
 
+import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
@@ -14,11 +15,13 @@ from .Network import NeuralNetwork
 
 class Deep(NeuralNetwork):
 
-    def __init__(self, name, classes, shape, batch_size=32):
+    def __init__(self, name, classes, shape, batch_size=32, patched_image: bool = False):
 
         self._classes = classes
         self._shape = shape
         self._batch_size = batch_size
+
+        self._patched_image = patched_image
 
         self._name = 'deep_' + name
         self._output = 'output/{}.h5'.format(self._name)
@@ -81,20 +84,59 @@ class Deep(NeuralNetwork):
         self._model.save(self._output)
         print('Model saved!')
 
-    def predict(self, test, labels):
+    def predict(self, dataframe, test, loader):
 
         print("Model predict ...")
 
-        # Extract labels of test set, predict them with the model
-        prediction = self._model.predict(test)
+        def one_hot_encode(preds):
 
-        for pred in prediction:
-            m = pred.max(axis=0)
-            for i in range(pred.shape[0]):
-                pred[i] = 1.0 if pred[i] == m else 0.0
+            for pred in preds:
+                val = pred.max(axis=0)
+                for k in range(3):  # 3-class classification
+                    pred[k] = 1.0 if pred[k] == val else 0.0
+
+            return preds
+
+        if self._patched_image:  # input composed of patches
+
+            print("Decision fusion mechanism ...")
+
+            images = dataframe.drop_duplicates(subset=['path'])
+            print('Images found : {}'.format(len(images)))
+            images_pred = np.zeros((images.shape[0], 3))
+
+            print('Computing frequency prediction for each image')
+            for i, image in images.iterrows():
+
+                print('\t- Image : {}'.format(image['path']))
+                patches = dataframe.loc[dataframe['path'] == image['path']]
+                print('\t- Number of patch found : {}'.format(len(patches)))
+
+                patches_pred = np.zeros((patches.shape[0], 3))
+                for j, _ in patches.iterrows():
+                    patch = loader(split=2, index=j)
+
+                    patch = self._model.predict(patch)
+                    patches_pred[j, :] = one_hot_encode(patch)
+
+                prediction, frequency = np.unique(patches_pred, return_counts=True)
+                print('\t- Patch prediction :'.format(len(patches)))
+                for h in range(prediction.shape[0]):
+                    print('\t\t- Class {} : {}'.format(prediction[h], frequency[h]))
+
+                images_pred[i, :] = prediction[np.argmax(frequency)]
+
+        else:  # input is directly full image
+
+            # Extract labels of test set, predict them with the model
+            images_pred = self._model.predict(test)
+            images_pred = one_hot_encode(images_pred)
+
+        # Extract labels from dataframe
+        labels = dataframe[['label_cll', 'label_fl', 'label_mcl']]
 
         y_est_test = np.argmax(np.array(labels), axis=1)
-        y_est_pred = np.argmax(np.array(prediction), axis=1)
+        y_est_pred = np.argmax(np.array(images_pred), axis=1)
 
         cm = confusion_matrix(y_est_test, y_est_pred)
         plot_confusion_matrix(cm=cm, classes=['CLL', 'FL', 'MCL'], path='output/cm_{}.png'.format(self._name), normalize=True)
@@ -119,7 +161,6 @@ def plot_confusion_matrix(cm, classes,
                           title='Confusion matrix',
                           path='',
                           cmap=plt.cm.Blues):
-    import itertools
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]

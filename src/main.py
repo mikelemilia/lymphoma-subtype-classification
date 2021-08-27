@@ -68,7 +68,6 @@ if __name__ == '__main__':
     name = '{}_{}'.format(mode, color_space) if feature_extracted == '-' else '{}_{}_{}'.format(mode, color_space,
                                                                                                 feature_extracted)
 
-    print('Selected architecture : {}'.format(architecture))
 
     train_dataset = None
     validation_dataset = None
@@ -76,77 +75,53 @@ if __name__ == '__main__':
 
     # Dataset initialization
     dataset = Dataset(folder=data, mode=mode, color_space=color_space, feature=feature_extracted)
+    # print('Selected architecture : {}'.format(architecture))
 
     dataset.generate_base_dataframe()
-    train, val, test = dataset.train_val_test_split()
+    train, val, test = dataset.split_dataset()
+
+    # print('\nStarting training set : {} images'.format(len(train)))
+    # print('Starting validation set  : {} images'.format(len(val)))
+    # print('Starting test set  : {} images'.format(len(test)))
 
     # Select loader
-    original = None
-    patch = None
-    data = None
+    loader = dataset.select_loader()
 
-    batch_size = 0
+    data = None
+    batch_size = 32
+    num_epochs = 50
     patched = False
 
     if mode == 'FULL':
-        batch_size = 32
-
-        if feature_extracted == '-':
-            original = dataset.load_data
-        elif feature_extracted == 'CANNY':
-            original = dataset.load_data_canny
-        elif feature_extracted == 'BLOB':
-            original = dataset.load_data_blob
-        elif feature_extracted == 'PCA':
-            original = dataset.load_data_pca
-        elif feature_extracted == 'WAV':
-            original = dataset.load_data_wavelet
-        else:
-            print('Feature extraction method not found.', file=sys.stderr)
-            exit(-1)
-
-        data = original(dataframe=train, index=0)
 
         # Augment datasets
-        train = dataset.generate_augmented_dataframe(df=train, name='train')
-        val = dataset.generate_augmented_dataframe(df=val, name='val')
-        test = dataset.generate_augmented_dataframe(df=test, name='test')
+        train = dataset.generate_augmented_dataframe(split=0, name='train')
+        val = dataset.generate_augmented_dataframe(split=1, name='val')
+        test = dataset.generate_augmented_dataframe(split=2, name='test')
 
-        train_dataset = dataset.create_dataset(loader=original, dataframe=train, batch_size=batch_size, shuffle=False)
-        validation_dataset = dataset.create_dataset(loader=original, dataframe=val, batch_size=batch_size, shuffle=False)
-        test_dataset = dataset.create_dataset(loader=original, dataframe=test, batch_size=batch_size, shuffle=False)
+        # print('\nAugmented training set : {} images'.format(len(train)))
+        # print('Augmented validation set  : {} images'.format(len(val)))
+        # print('Augmented test set  : {} images'.format(len(test)))
 
     elif mode == 'PATCH':
-        batch_size = 32
-        patched = True
-
-        if feature_extracted == '-':
-            patch = dataset.load_patch_data
-        elif feature_extracted == 'CANNY':
-            patch = dataset.load_data_canny
-        elif feature_extracted == 'BLOB':
-            patch = dataset.load_data_blob
-        elif feature_extracted == 'PCA':
-            patch = dataset.load_data_pca
-        elif feature_extracted == 'WAV':
-            patch = dataset.load_data_wavelet
-        else:
-            print('Feature extraction method not found.', file=sys.stderr)
-            exit(-1)
-
-        data = patch(dataframe=train, index=0)
 
         # Patch datasets
-        train = dataset.generate_patch_dataframe(df=train, name='train')
-        val = dataset.generate_patch_dataframe(df=val, name='val')
-        test = dataset.generate_patch_dataframe(df=test, name='test')
+        train = dataset.generate_patch_dataframe(split=0, name='train')
+        val = dataset.generate_patch_dataframe(split=1, name='val')
+        test = dataset.generate_patch_dataframe(split=2, name='test')
 
-        train_dataset = dataset.create_dataset(dataframe=train, loader=patch, batch_size=batch_size, shuffle=False)
-        validation_dataset = dataset.create_dataset(dataframe=val, loader=patch, batch_size=batch_size, shuffle=False)
-        test_dataset = dataset.create_dataset(dataframe=test, loader=patch, batch_size=batch_size, shuffle=False)
+        patched = True
 
+        # print('\nPatched training set : {} images'.format(len(train)))
+        # print('Patched validation set  : {} images'.format(len(val)))
+        # print('Patched test set  : {} images'.format(len(test)))
+
+    train_dataset = dataset.create_dataset(loader=loader, dataframe=train, batch_size=batch_size, shuffle=False, split=0)
+    val_dataset = dataset.create_dataset(loader=loader, dataframe=val, batch_size=batch_size, shuffle=False, split=1)
+    test_dataset = dataset.create_dataset(loader=loader, dataframe=test, batch_size=batch_size, shuffle=False, split=2)
+
+    data = loader(split=0, index=0)
     input_size = data.shape
-    num_epochs = 50
 
     model = None
 
@@ -161,10 +136,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        if patched:
-            model.predict(dataframe=test, test=test_dataset, loader=patch)
-        else:
-            model.predict(dataframe=test, test=test_dataset, loader=original)
+        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     if architecture == 'DNN':
 
@@ -176,7 +148,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
+        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'D-CNN':
 
@@ -188,7 +160,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
+        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'AE-DNN':
         pass

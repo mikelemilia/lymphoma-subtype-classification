@@ -23,7 +23,6 @@ class Convolutional(NeuralNetwork):
 
         self._name = 'cnn_' + name
         self._output = 'output/{}.h5'.format(self._name)
-        self._best = 'best/{}.h5'.format(self._name)
 
         self._loaded = False
 
@@ -78,7 +77,6 @@ class Convolutional(NeuralNetwork):
         self._model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Define callbacks
-        # best_model_checkpoint = ModelCheckpoint(self._best, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
         # reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
         early_stop = EarlyStopping(monitor='val_accuracy', mode='max', patience=10, verbose=1)
 
@@ -103,61 +101,71 @@ class Convolutional(NeuralNetwork):
 
         print("Model predict ...")
 
+        def one_hot_encode(preds):
+
+            for pred in preds:
+                val = pred.max(axis=0)
+                for k in range(3):  # 3-class classification
+                    pred[k] = 1.0 if pred[k] == val else 0.0
+
+            return preds
+
         if self._patched_image:  # input composed of patches
-            print("Patched")
+
+            print("Decision fusion mechanism ...")
 
             images = dataframe.drop_duplicates(subset=['path'])
             print('Images found : {}'.format(len(images)))
-            prediction = np.zeros((images.shape[0], 3))
+            images_pred = np.zeros((images.shape[0], 3))
 
             print('Computing frequency prediction for each image')
-            for _, image in images.iterrows():
+            count = 0
+            for i, image in images.iterrows():
 
-                print('\t- Image : {}'.format(image['path']))
-                label = image[['label_cll', 'label_fl', 'label_mcl']]
-                image_paths = dataframe.loc[dataframe['path'] == image['path']]
-                print('\t- Number of patch found : {}'.format(len(image_paths)))
+                print('\tImage {} : {}'.format(count, image['path']))
+                patches = dataframe.loc[dataframe['path'] == image['path']]
+                print('\t\tPatch found : {}'.format(len(patches)))
 
-                for index, image_path in image_paths.iterrows():
-                    print(image_path)
-                    print(index, "\n----------")
-                    image = loader(index)
-                    # plt.imshow(image)
-                    # plt.show()
-                    #
-                    # prediction = self._model.predict(image)
-                    # predictions = np.concatenate(())
+                patches_pred = np.zeros((patches.shape[0], 3))
 
+                for j, _ in patches.iterrows():
+                    patch = loader(split=2, index=j)
 
+                    patch = self._model.predict(patch)
+                    patches_pred[j, :] = one_hot_encode(patch)
+
+                prediction, frequency = np.unique(patches_pred, axis=0, return_counts=True)
+                print('\t\tPrediction :')
+                for h in range(prediction.shape[0]):
+                    print('\t\t\tClass {} : {}'.format(prediction[h], frequency[h]))
+
+                images_pred[count, :] = prediction[np.argmax(frequency)]
+                count += 1
 
         else:  # input is directly full image
 
             # Extract labels of test set, predict them with the model
-            prediction = self._model.predict(test)
+            images_pred = self._model.predict(test)
+            images_pred = one_hot_encode(images_pred)
 
-            for pred in prediction:
-                m = pred.max(axis=0)
-                for i in range(pred.shape[0]):
-                    pred[i] = 1.0 if pred[i] == m else 0.0
+        # Extract labels from dataframe
+        labels = dataframe[['label_cll', 'label_fl', 'label_mcl']]
 
-            # Extract labels from dataframe
-            labels = dataframe[['label_cll', 'label_fl', 'label_mcl']]
+        y_est_test = np.argmax(np.array(labels), axis=1)
+        y_est_pred = np.argmax(np.array(images_pred), axis=1)
 
-            y_est_test = np.argmax(np.array(labels), axis=1)
-            y_est_pred = np.argmax(np.array(prediction), axis=1)
+        cm = confusion_matrix(y_est_test, y_est_pred)
+        plot_confusion_matrix(cm=cm, classes=['CLL', 'FL', 'MCL'], path='output/cm_{}.png'.format(self._name), normalize=True)
 
-            cm = confusion_matrix(y_est_test, y_est_pred)
-            plot_confusion_matrix(cm=cm, classes=['CLL', 'FL', 'MCL'], path='output/cm_{}.png'.format(self._name), normalize=True)
+        # Determine performance scores
+        accuracy = accuracy_score(y_est_test, y_est_pred, normalize=True)
+        precision, recall, fscore, _ = precision_recall_fscore_support(y_est_test, y_est_pred, average='macro')
 
-            # Determine performance scores
-            accuracy = accuracy_score(y_est_test, y_est_pred, normalize=True)
-            precision, recall, fscore, _ = precision_recall_fscore_support(y_est_test, y_est_pred, average='macro')
-
-            print('PERFORMANCES ON TEST SET:')
-            print('Accuracy: {:.2f}%'.format(accuracy * 100))
-            print('Precision: {:.2f}%'.format(precision * 100))
-            print('Recall: {:.2f}%'.format(recall * 100))
-            print('Fscore: {:.2f}%'.format(fscore * 100))
+        print('PERFORMANCES ON TEST SET:')
+        print('Accuracy: {:.2f}%'.format(accuracy * 100))
+        print('Precision: {:.2f}%'.format(precision * 100))
+        print('Recall: {:.2f}%'.format(recall * 100))
+        print('Fscore: {:.2f}%'.format(fscore * 100))
 
     @property
     def is_loaded(self):
