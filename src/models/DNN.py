@@ -1,8 +1,8 @@
 import os
-import sys
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+import numpy as np
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
 
 from tensorflow import keras
 from tensorflow.keras import Input, Model
@@ -29,8 +29,9 @@ class Deep(NeuralNetwork):
         if os.path.exists(self._output):
             self._model = keras.models.load_model(self._output)
             self._loaded = True
+        else:
+            self._model = None
 
-        self._model = None
         self._history = None
 
     def build(self, hidden_units):
@@ -69,7 +70,7 @@ class Deep(NeuralNetwork):
             epochs=num_epochs,
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
-            verbose=1,
+            verbose=2,
             callbacks=[early_stop]
         )
 
@@ -80,17 +81,27 @@ class Deep(NeuralNetwork):
         self._model.save(self._output)
         print('Model saved!')
 
-    def predict(self, test, labels, steps):
+    def predict(self, test, labels):
 
         print("Model predict ...")
 
         # Extract labels of test set, predict them with the model
         prediction = self._model.predict(test)
-        test_est_classes = (prediction > 0.5).astype(int)
+
+        for pred in prediction:
+            m = pred.max(axis=0)
+            for i in range(pred.shape[0]):
+                pred[i] = 1.0 if pred[i] == m else 0.0
+
+        y_est_test = np.argmax(np.array(labels), axis=1)
+        y_est_pred = np.argmax(np.array(prediction), axis=1)
+
+        cm = confusion_matrix(y_est_test, y_est_pred)
+        plot_confusion_matrix(cm=cm, classes=['CLL', 'FL', 'MCL'], path='output/cm_{}.png'.format(self._name), normalize=True)
 
         # Determine performance scores
-        accuracy = accuracy_score(labels, test_est_classes, normalize=True)
-        precision, recall, fscore, _ = precision_recall_fscore_support(labels, test_est_classes, average='macro')
+        accuracy = accuracy_score(y_est_test, y_est_pred, normalize=True)
+        precision, recall, fscore, _ = precision_recall_fscore_support(y_est_test, y_est_pred, average='macro')
 
         print('PERFORMANCES ON TEST SET:')
         print('Accuracy: {:.2f}%'.format(accuracy * 100))
@@ -98,46 +109,40 @@ class Deep(NeuralNetwork):
         print('Recall: {:.2f}%'.format(recall * 100))
         print('Fscore: {:.2f}%'.format(fscore * 100))
 
-        # Plot of loss-accuracy and ROC
-
-        fig, axs = plt.subplots(2, 2)
-        fig.suptitle('Loss, accuracy and ROC')
-        # Plot loss
-        axs[0, 0].plot(self._history.history['loss'], label='Train loss')
-        axs[0, 0].plot(self._history.history['val_loss'], label='Val loss')
-        axs[0, 0].legend()
-        axs[0, 0].set_xlabel('Epoch')
-        axs[0, 0].set_ylabel('Loss')
-        axs[0, 0].set_title('Loss')
-        # Plot accuracy
-        axs[1, 0].plot(self._history.history['accuracy'], label='Train accuracy')
-        axs[1, 0].plot(self._history.history['val_accuracy'], label='Val accuracy')
-        axs[1, 0].legend()
-        axs[1, 0].set_xlabel('Epoch')
-        axs[1, 0].set_ylabel('Accuracy')
-        axs[1, 0].set_title('Accuracy')
-
-        # if len(label) == 1:
-        #     fpr, tpr, _ = roc_curve(test_labels, test_est_classes)
-        #     roc_auc = auc(fpr, tpr)
-        #     # Plot ROC when only 1 label is present
-        #     axs[0, 1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-        #     axs[0, 1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        #     axs[0, 1].set_xlabel('False Positive Rate')
-        #     axs[0, 1].set_ylabel('True Positive Rate')
-        #     axs[0, 1].set_title('ROC for {}'.format(label))
-        # else:
-        #     for l in range(len(label)):
-        #         fpr, tpr, _ = roc_curve(test_labels[:, l], test_est_classes[:, l])
-        #         roc_auc = auc(fpr, tpr)
-        #         # Plot ROC for each of the two labels
-        #         axs[l, 1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-        #         axs[l, 1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        #         axs[l, 1].set_xlabel('False Positive Rate')
-        #         axs[l, 1].set_ylabel('True Positive Rate')
-        #         axs[l, 1].set_title('ROC for {}'.format(label[l]))
-        # plt.savefig('images/{}_evaluation'.format(title))
-
     @property
     def is_loaded(self):
         return self._loaded
+
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          path='',
+                          cmap=plt.cm.Blues):
+    import itertools
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes)
+    plt.yticks(tick_marks, classes)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, round(cm[i, j], 4),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.ylabel('Ground truth')
+    plt.xlabel('Prediction')
+
+    plt.savefig(path)
+    plt.show()
+

@@ -1,20 +1,27 @@
 #!/bin/bash
 
-echo "Submitted NN without feature extracted"
-sbatch original.slurm
-sbatch patched.slurm
+PATH="/nfsd/hda/miliamikel/lymph/scripts"
+COLOR=("rgb" "hsv" "gray")
 
-#echo ""
-#echo "Submitted NN with CANNY"
-#sbatch original_can.slurm
-#sbatch patched_can.slurm
-#
-#echo ""
-#echo "Submitted NN with PCA"
-#sbatch original_pca.slurm
-#sbatch patched_pca.slurm
-#
-#echo ""
-#echo "Submitted NN with WAV"
-#sbatch original_wav.slurm
-#sbatch patched_wav.slurm
+for color in "${COLOR[@]}"; do
+
+  echo "Submitted full image"
+  sbatch "$PATH/$color".slurm
+
+  echo "Submitted full image + CANNY"
+  echo ""
+  sbatch "$PATH/$color"_canny.slurm
+
+  echo "Submitted full image + PCA"
+  echo ""
+  sbatch "$PATH/$color"_pca.slurm
+
+  echo "Submitted full image + THRESH"
+  echo ""
+  sbatch "$PATH/$color"_thresh.slurm
+
+  echo "Submitted full image + WAVELET"
+  echo ""
+  sbatch "$PATH/$color"_wavelet.slurm
+
+done

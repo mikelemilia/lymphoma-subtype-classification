@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name original_wav
-#SBATCH --output output_original_wav_%j.txt
-#SBATCH --error errors_original_wav_%j.txt
+#SBATCH --job-name hda_rgb_wavelet
+#SBATCH --output rgb_wavelet_%j.out
+#SBATCH --error rgb_wavelet_%j.err
 
 #SBATCH --mail-type ALL
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
@@ -10,8 +10,8 @@
 #SBATCH -n 1
 #SBATCH -c 8
 #SBATCH -p allgroups
-#SBATCH -t 7-00:00:00
-#SBATCH --mem 200G
+#SBATCH -t 3-12:00:00
+#SBATCH --mem 75G
 
 #SBATCH --gres=gpu:1
 
@@ -22,7 +22,7 @@ DATA=/nfsd/hda/DATASETS/Project_6
 # make my folder the current directory
 cd $DIRECTORY
 
-# setup python3 environment for machine learning computations
+# setup python3 environment for machine learning computations 
 source /nfsd/opt/anaconda3/anaconda3.sh
 conda activate /nfsd/signet/hda_env_gpu
 
@@ -30,20 +30,14 @@ conda activate /nfsd/signet/hda_env_gpu
 echo "Running CNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL -e WAV
-srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c HSV -m FULL -e WAV
-srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c GRAY -m FULL -e WAV
 
 echo "Running DNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL -e WAV
-srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c HSV -m FULL -e WAV
-srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c GRAY -m FULL -e WAV
 
 echo "Running D-CNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m FULL -e WAV
-srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c HSV -m FULL -e WAV
-srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c GRAY -m FULL -e WAV
 
 # deactivate environment at the end of the job
 conda deactivate

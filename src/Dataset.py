@@ -7,11 +7,11 @@ import pandas as pd
 import pywt
 import tensorflow as tf
 from skimage.color import rgb2hsv, rgb2gray
-from skimage.feature import canny, blob_log
-from skimage.filters import threshold_multiotsu, gaussian
-from skimage.morphology import erosion, dilation
+from skimage.feature import canny
+from skimage.filters import threshold_multiotsu, gaussian, threshold_otsu
 from skimage.io import imread
-from skimage.transform import resize
+from skimage.transform import resize, rotate
+from skimage.util import random_noise
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, normalize
@@ -34,28 +34,29 @@ class Dataset:
         self._labels = []
         self._classes = []
 
+        # Generate dataframe
         self._dataframe = None
-        data = None
+        # data = None
 
-        if mode == 'FULL':
-            self.generate_dataframe()
-            data = self.load_data(0)
-        elif mode == 'PATCH':
-            self.generate_patch_dataframe()
-            data = self.load_patch_data(0)
+        # if mode == 'FULL':
+        #     self.generate_augmented_dataframe()
+        #     data = self.load_data(0)
+        # elif mode == 'PATCH':
+        #     self.generate_patch_dataframe()
+        #     data = self.load_patch_data(0)
+        #
+        # if self._feature_extracted == 'CANNY':
+        #     data = self.load_data_canny(0)
+        # elif self._feature_extracted == 'PCA':
+        #     data = self.load_data_pca(0)
+        # elif self._feature_extracted == 'WAV':
+        #     data = self.load_data_wavelet(0)
+        # elif self._feature_extracted == 'BLOB':
+        #     data = self.load_data_blob(0)
 
-        if self._feature_extracted == 'CANNY':
-            data = self.load_data_canny(0)
-        elif self._feature_extracted == 'PCA':
-            data = self.load_data_pca(0)
-        elif self._feature_extracted == 'WAV':
-            data = self.load_data_wavelet(0)
-        elif self._feature_extracted == 'BLOB':
-            data = self.load_data_blob(0)
+        # self._dim = data.shape
 
-        self._dim = data.shape
-
-    def generate_dataframe(self):
+    def generate_base_dataframe(self):
 
         # Create dataframe
         data = []
@@ -79,22 +80,54 @@ class Dataset:
         self._dataframe['label_mcl'] = self._labels[:, 2]
 
         # Save dataframe
-        self._dataframe.to_csv('dataframe.csv')
+        self._dataframe.to_csv('base_dataframe.csv')
 
-    def generate_patch_dataframe(self):
+    def generate_augmented_dataframe(self, df, name):
 
         # Generate the starting dataframe
-        self.generate_dataframe()
+        # self.generate_base_dataframe()
+
+        # Add the pair [row, col] for each patch
+        row = df.shape[0]
+
+        dataframe = pd.DataFrame(np.repeat(df.values, 12, axis=0))
+        dataframe.columns = df.columns
+        df = dataframe
+
+        transformation = [
+            'V_FLIP', 'H_FLIP', 'R_NOISE',
+            'ROT_30', 'ROT_60', 'ROT_90',
+            # 'ROT_45', 'ROT_75', 'ROT_105',
+            'ROT_120', 'ROT_150', 'ROT_210',
+            # 'ROT_135', 'ROT_165', 'ROT_225',
+            'ROT_240', 'ROT_270', 'ROT_300',
+            # 'ROT_255', 'ROT_285', 'ROT_315'
+        ]
+        transformations = np.concatenate((transformation, transformation))
+        for i in range(row - 2):
+            transformations = np.concatenate((transformations, transformation))
+
+        df['transformation'] = transformations
+
+        # Save dataframe
+        df.to_csv('augmented_{}_dataframe.csv'.format(name))
+
+        return df
+
+    def generate_patch_dataframe(self, df, name):
+
+        # Generate the starting dataframe
+        # self.generate_base_dataframe()
 
         # Add the pair [row, col] for each patch
         names = ['row', 'col']
-        dims = [13, 13]
+        dims = [8, 10]
         for k in range(2):
-            row = self._dataframe.shape[0]
+            row = df.shape[0]
 
-            dataframe = pd.DataFrame(np.repeat(self._dataframe.values, dims[k], axis=0))
-            dataframe.columns = self._dataframe.columns
-            self._dataframe = dataframe
+            dataframe = pd.DataFrame(np.repeat(df.values, dims[k], axis=0))
+            dataframe.columns = df.columns
+            df = dataframe
 
             patch = np.arange(1, dims[k] + 1, 1)
             patches = np.concatenate((patch, patch))
@@ -102,10 +135,12 @@ class Dataset:
             for i in range(row - 2):
                 patches = np.concatenate((patches, patch))
 
-            self._dataframe[names[k]] = patches
+            df[names[k]] = patches
 
         # Save dataframe
-        self._dataframe.to_csv('patch_dataframe.csv')
+        df.to_csv('patch_{}_dataframe.csv'.format(name))
+
+        return df
 
     def extract_tar(self, file):
 
@@ -160,14 +195,14 @@ class Dataset:
         # Application of the function passed in input to every data index (from the index,
         # data is extracted and if necessary a feature is extracted with 'loader'
         dataset = dataset.map(
-            lambda index, label: (tf.numpy_function(loader, [index], np.float32), label),
+            lambda index, label: (tf.numpy_function(loader, [dataframe, index], np.float32), label),
             num_parallel_calls=os.cpu_count()
         )
 
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes))
-        # dataset = dataset.repeat()
+        dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
@@ -177,7 +212,8 @@ class Dataset:
     def create_dataset_nolabel(self, dataframe, loader, batch_size, shuffle):
         # Creation of the dataset of type data - data for autoencoders
 
-        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(
+            int)
         # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
         data_indexes_in = list(dataframe.index)
         for i in range(len(data_indexes_in)):
@@ -191,23 +227,25 @@ class Dataset:
         # Application of the function passed in input to every data index (from the index, data is extracted and if
         # necessary a feature is extracted with 'loader' (equal for both the data present)
         dataset = dataset.map(
-            lambda index_in, index_out: (tf.numpy_function(loader, [index_in], np.float32), tf.numpy_function(loader, [index_out], np.float32)),
+            lambda index_in, index_out: (
+            tf.numpy_function(loader, [index_in], np.float32), tf.numpy_function(loader, [index_out], np.float32)),
             num_parallel_calls=os.cpu_count()
         )
 
+        # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes_in))
         # dataset = dataset.repeat()
-
-        # Operations for shuffling and batching of the dataset
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
 
         return dataset
 
-    def load_data(self, index):
-        path = self._dataframe.iloc[int(index)]['path']
+    def load_data(self, dataframe, index):
+
+        path = dataframe.iloc[int(index)]['path']
+        trans = dataframe.iloc[int(index)]['transformation']
 
         # Decode needed for the subsequent data loading and extraction of the correspondent file name
         if isinstance(path, bytes):
@@ -224,6 +262,17 @@ class Dataset:
             image = imread(path)
             image = rgb2hsv(image)
 
+        if trans == 'V_FLIP':
+            image = image[::-1, :]
+        elif trans == 'H_FLIP':
+            image = image[:, ::-1]
+        elif trans == 'R_NOISE':
+            image = random_noise(image)
+        elif 'ROT' in trans.split('_')[0]:
+            image = rotate(image, int(trans.split('_')[1]))
+            # print(type(trans.split('_')[1]))
+            # print(int(trans.split('_')[1]))
+
         # Resize
         scale_factor = 0.1  # percent of original size
         height = int(image.shape[0] * scale_factor)
@@ -239,11 +288,11 @@ class Dataset:
 
         return np.array(resized, dtype='float32')
 
-    def load_patch_data(self, index):
+    def load_patch_data(self, dataframe, index):
 
-        path = self._dataframe.iloc[int(index)]['path']
-        row = int(self._dataframe.iloc[int(index)]['row'])
-        col = int(self._dataframe.iloc[int(index)]['col'])
+        path = dataframe.iloc[int(index)]['path']
+        row = int(dataframe.iloc[int(index)]['row'])
+        col = int(dataframe.iloc[int(index)]['col'])
 
         # Decode needed for the subsequent data loading and extraction of the correspondent file name
         if isinstance(path, bytes):
@@ -276,50 +325,50 @@ class Dataset:
         resized = np.array(resized)
 
         # Extract the correct patch from the image
-        patch = resized[(row - 1) * 40:(row * 40), (col - 1) * 53:(col * 53)]
+        # patch = image[(row - 1) * 40:(row * 40), (col - 1) * 53:(col * 53), :]
+        patch = resized[(row - 1) * 64:(row * 64), (col - 1) * 64:(col * 64), :]
 
         return np.array(patch, dtype='float32')
 
-    def load_data_canny(self, index):
+    def load_data_canny(self, dataframe, index):
 
         # print("Extracting CANNY feature from image #{}".format(index))
 
-        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+        image = self.load_data(dataframe, index) if self._mode == 'FULL' else self.load_patch_data(dataframe, index)
 
         for i in range(image.shape[2]):
             blur = gaussian(image[:, :, i], sigma=0.4, truncate=3.5)
             low, high = threshold_multiotsu(image=blur)
             image[:, :, i] = canny(blur, sigma=1, low_threshold=low, high_threshold=high)
 
-        # plt.imshow(image)
-        # plt.show()
-
         return image
 
-    def load_data_blob(self, index):
+    def load_data_blob(self, dataframe, index):
 
         # print("Extracting BLOB feature from image #{}".format(index))
 
-        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+        image = self.load_data(dataframe, index) if self._mode == 'FULL' else self.load_patch_data(dataframe, index)
 
         if self._color_space == 'HSV':
             gray = image[:, :, 1]  # saturation channel
+            gray = np.expand_dims(gray, -1)
         elif self._color_space == 'RGB':
             gray = rgb2gray(image)
+            gray = np.expand_dims(gray, -1)
         else:
             gray = image
 
-        binarized = gray < 0.025
+        thresh = threshold_otsu(image=gray)
 
-        binarized = np.expand_dims(binarized, -1)
+        binarized = gray < thresh
 
         return np.array(binarized, dtype='float32')
 
-    def load_data_pca(self, index, components=32):
+    def load_data_pca(self, dataframe, index, components=32):
 
         # print("Extracting PCA feature from image #{}".format(index))
 
-        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+        image = self.load_data(dataframe, index) if self._mode == 'FULL' else self.load_patch_data(dataframe, index)
 
         x, y, n = image.shape
 
@@ -331,11 +380,11 @@ class Dataset:
 
         return pc_image.astype(np.float32)
 
-    def load_data_wavelet(self, index):
+    def load_data_wavelet(self, dataframe, index):
 
         # print("Extracting WAVELET feature from image #{}".format(index))
 
-        image = self.load_data(index) if self._mode == 'FULL' else self.load_patch_data(index)
+        image = self.load_data(dataframe, index) if self._mode == 'FULL' else self.load_patch_data(dataframe, index)
 
         _, _, n = image.shape
 
@@ -343,15 +392,14 @@ class Dataset:
 
         if self._color_space == 'HSV':
 
-            ca, _ = pywt.dwt(image[:, :, 0], 'sym5')    # hue
+            ca, _ = pywt.dwt(image[:, :, 0], 'sym5')  # hue
             approx_channel.append(ca)
-            ca, _ = pywt.dwt(image[:, :, 2], 'sym5')    # val
+            ca, _ = pywt.dwt(image[:, :, 2], 'sym5')  # val
             approx_channel.append(ca)
 
         else:
 
             for channel in range(n):
-
                 # For the image coming from each channel, extract the corresponding wavelet decomposition
                 ca, _ = pywt.dwt(image[:, :, channel], 'sym5')
                 approx_channel.append(ca)
@@ -384,6 +432,6 @@ class Dataset:
 
         plt.show()  # finally, render the plot
 
-    @property
-    def dim(self):
-        return self._dim
+    # @property
+    # def dim(self):
+    #     return self._dim

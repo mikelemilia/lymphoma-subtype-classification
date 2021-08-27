@@ -2,11 +2,10 @@ import argparse
 import sys
 
 from Dataset import *
-from models import CNN, DNN, DCNN, AEDNN
+from models import CNN, DNN, DCNN
 
 
 def parse_input():
-
     f = ''
     a = ''
     m = ''
@@ -21,7 +20,8 @@ def parse_input():
     parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
-    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, WAV, BLOB')
+    parser.add_argument('-e', '--extra', type=str, default='-',
+                        help='extracted features, it can be CANNY, PCA, WAV, BLOB')
 
     # Retrieve arguments value
     args = parser.parse_args()
@@ -34,7 +34,8 @@ def parse_input():
         f = args.folder
 
     if str(args.arch).upper() not in ['CNN', 'DNN', 'D-CNN', 'AE-DNN', 'RNN']:
-        print('You must select a valid implemented architecture. Valid options are: CNN, D-CNN, AE-DNN.', file=sys.stderr)
+        print('You must select a valid implemented architecture. Valid options are: CNN, D-CNN, AE-DNN.',
+              file=sys.stderr)
         exit(-1)
     else:
         a = str(args.arch).upper()
@@ -64,7 +65,8 @@ if __name__ == '__main__':
 
     data, architecture, mode, color_space, feature_extracted = parse_input()
 
-    name = '{}_{}'.format(mode, color_space) if feature_extracted == '-' else '{}_{}_{}'.format(mode, color_space, feature_extracted)
+    name = '{}_{}'.format(mode, color_space) if feature_extracted == '-' else '{}_{}_{}'.format(mode, color_space,
+                                                                                                feature_extracted)
 
     print('Selected architecture : {}'.format(architecture))
 
@@ -75,48 +77,75 @@ if __name__ == '__main__':
     # Dataset initialization
     dataset = Dataset(folder=data, mode=mode, color_space=color_space, feature=feature_extracted)
 
+    dataset.generate_base_dataframe()
     train, val, test = dataset.train_val_test_split()
 
     # Select loader
     original = None
     patch = None
-
-    if feature_extracted == '-':
-        original = dataset.load_data
-        patch = dataset.load_patch_data
-    elif feature_extracted == 'CANNY':
-        original = dataset.load_data_canny
-        patch = dataset.load_data_canny
-    elif feature_extracted == 'BLOB':
-        original = dataset.load_data_blob
-        patch = dataset.load_data_blob
-    elif feature_extracted == 'PCA':
-        original = dataset.load_data_pca
-        patch = dataset.load_data_pca
-    elif feature_extracted == 'WAV':
-        original = dataset.load_data_wavelet
-        patch = dataset.load_data_wavelet
-    else:
-        print('Feature extraction method not found.', file=sys.stderr)
-        exit(-1)
+    data = None
 
     batch_size = 0
+    patched = False
 
     if mode == 'FULL':
-        # # Check dataset
-        # dataset.random_plot()
-        batch_size = 16
-        train_dataset = dataset.create_dataset(train, loader=original, batch_size=batch_size, shuffle=False)
-        validation_dataset = dataset.create_dataset(val, loader=original, batch_size=batch_size, shuffle=False)
-        test_dataset = dataset.create_dataset(test, loader=original, batch_size=batch_size, shuffle=False)
-    elif mode == 'PATCH':
-        # Patches
         batch_size = 32
-        train_dataset = dataset.create_dataset(train, loader=patch, batch_size=batch_size, shuffle=False)
-        validation_dataset = dataset.create_dataset(val, loader=patch, batch_size=batch_size, shuffle=False)
-        test_dataset = dataset.create_dataset(test, loader=patch, batch_size=batch_size, shuffle=False)
 
-    input_size = dataset.dim
+        if feature_extracted == '-':
+            original = dataset.load_data
+        elif feature_extracted == 'CANNY':
+            original = dataset.load_data_canny
+        elif feature_extracted == 'BLOB':
+            original = dataset.load_data_blob
+        elif feature_extracted == 'PCA':
+            original = dataset.load_data_pca
+        elif feature_extracted == 'WAV':
+            original = dataset.load_data_wavelet
+        else:
+            print('Feature extraction method not found.', file=sys.stderr)
+            exit(-1)
+
+        data = original(dataframe=train, index=0)
+
+        # Augment datasets
+        train = dataset.generate_augmented_dataframe(df=train, name='train')
+        val = dataset.generate_augmented_dataframe(df=val, name='val')
+        test = dataset.generate_augmented_dataframe(df=test, name='test')
+
+        train_dataset = dataset.create_dataset(loader=original, dataframe=train, batch_size=batch_size, shuffle=False)
+        validation_dataset = dataset.create_dataset(loader=original, dataframe=val, batch_size=batch_size, shuffle=False)
+        test_dataset = dataset.create_dataset(loader=original, dataframe=test, batch_size=batch_size, shuffle=False)
+
+    elif mode == 'PATCH':
+        batch_size = 32
+        patched = True
+
+        if feature_extracted == '-':
+            patch = dataset.load_patch_data
+        elif feature_extracted == 'CANNY':
+            patch = dataset.load_data_canny
+        elif feature_extracted == 'BLOB':
+            patch = dataset.load_data_blob
+        elif feature_extracted == 'PCA':
+            patch = dataset.load_data_pca
+        elif feature_extracted == 'WAV':
+            patch = dataset.load_data_wavelet
+        else:
+            print('Feature extraction method not found.', file=sys.stderr)
+            exit(-1)
+
+        data = patch(dataframe=train, index=0)
+
+        # Patch datasets
+        train = dataset.generate_patch_dataframe(df=train, name='train')
+        val = dataset.generate_patch_dataframe(df=val, name='val')
+        test = dataset.generate_patch_dataframe(df=test, name='test')
+
+        train_dataset = dataset.create_dataset(dataframe=train, loader=patch, batch_size=batch_size, shuffle=False)
+        validation_dataset = dataset.create_dataset(dataframe=val, loader=patch, batch_size=batch_size, shuffle=False)
+        test_dataset = dataset.create_dataset(dataframe=test, loader=patch, batch_size=batch_size, shuffle=False)
+
+    input_size = data.shape
     num_epochs = 50
 
     model = None
@@ -124,22 +153,27 @@ if __name__ == '__main__':
     # Check selected architecture
     if architecture == 'CNN':
 
-        model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
+        model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
 
         if not model.is_loaded:
             model.build()
-            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=20, steps=[len(train) // batch_size, len(val) // batch_size])
+            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
+                      steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
+        if patched:
+            model.predict(dataframe=test, test=test_dataset, loader=patch)
+        else:
+            model.predict(dataframe=test, test=test_dataset, loader=original)
 
     if architecture == 'DNN':
 
         model = DNN(name=name, classes=3, shape=input_size, batch_size=batch_size)
 
         if not model.is_loaded:
-            model.build(hidden_units=[512, 256, 128, 64])
-            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs, steps=[len(train) // batch_size, len(val) // batch_size])
+            model.build(hidden_units=[1024, 512, 256, 128, 64])
+            model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
+                      steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
         model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
@@ -153,13 +187,17 @@ if __name__ == '__main__':
             model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
-        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']], steps=len(test) // 32)
+
+        model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
 
     elif architecture == 'AE-DNN':
-
-        model = AEDNN(name=name, classes=3, shape=input_size, batch_size=batch_size, code_size=512)
-
-
-
-
-
+        pass
+        # model = AEDNN(name=name, classes=3, shape=input_size, batch_size=batch_size, code_size=512)
+        #
+        # if not model.is_loaded:
+        #     model.build()
+        #     model.fit(train=train_dataset, validation=validation_dataset, num_epochs=num_epochs,
+        #               steps=[len(train) // batch_size, len(val) // batch_size])
+        #     model.save()
+        #
+        # model.predict(test=test_dataset, labels=test[['label_cll', 'label_fl', 'label_mcl']])
