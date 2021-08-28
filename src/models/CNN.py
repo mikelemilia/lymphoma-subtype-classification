@@ -155,7 +155,8 @@ class Convolutional(NeuralNetwork):
         y_est_pred = np.argmax(np.array(images_pred), axis=1)
 
         cm = confusion_matrix(y_est_test, y_est_pred)
-        plot_confusion_matrix(cm=cm, classes=['CLL', 'FL', 'MCL'], path='output/cm_{}.png'.format(self._name), normalize=True)
+        plot_confusion_matrix(cm=cm, classes=['CLL', 'FL', 'MCL'], path='output/cm_{}.png'.format(self._name),
+                              normalize=False)
 
         # Determine performance scores
         accuracy = accuracy_score(y_est_test, y_est_pred, normalize=True)

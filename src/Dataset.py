@@ -213,18 +213,17 @@ class Dataset:
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes))
-        dataset = dataset.repeat()
+        # dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
 
         return dataset
 
-    def create_dataset_nolabel(self, dataframe, loader, batch_size, shuffle):
+    def create_dataset_nolabel(self, dataframe, loader, batch_size, shuffle: bool = False, split: int = 0):
         # Creation of the dataset of type data - data for autoencoders
 
-        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(
-            int)
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
         # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
         data_indexes_in = list(dataframe.index)
         for i in range(len(data_indexes_in)):
@@ -239,14 +238,14 @@ class Dataset:
         # necessary a feature is extracted with 'loader' (equal for both the data present)
         dataset = dataset.map(
             lambda index_in, index_out: (
-            tf.numpy_function(loader, [index_in], np.float32), tf.numpy_function(loader, [index_out], np.float32)),
+            tf.numpy_function(loader, [split, index_in], np.float32), tf.numpy_function(loader, [split, index_out], np.float32)),
             num_parallel_calls=os.cpu_count()
         )
 
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes_in))
-        # dataset = dataset.repeat()
+        dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)

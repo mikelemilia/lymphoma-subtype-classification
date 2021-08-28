@@ -22,5 +22,3 @@ class NeuralNetwork(ABC):
     @abstractmethod
     def predict(self, *args):
         pass
-
-

@@ -131,5 +131,5 @@ dmypy.json
 
 *.tar.gz
 
-results
 output
+*.csv
