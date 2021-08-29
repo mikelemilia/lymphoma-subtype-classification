@@ -213,7 +213,7 @@ class Dataset:
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes))
-        # dataset = dataset.repeat()
+        dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
@@ -262,7 +262,7 @@ class Dataset:
 
         # Select feature loader
         if self._feature_extracted == 'BLOB':
-            return self.load_data_blob
+            return self.load_data_thresh
         elif self._feature_extracted == 'PCA':
             return self.load_data_pca
         elif self._feature_extracted == 'WAV':
@@ -302,16 +302,19 @@ class Dataset:
             image = rotate(image, int(trans.split('_')[1]))
 
         # Resize
-        scale_factor = 0.1  # percent of original size
+        scale_factor = 0.3  # percent of original size
         height = int(image.shape[0] * scale_factor)
         width = int(image.shape[1] * scale_factor)
 
         resized_shape = (height, width, image.shape[2])
 
-        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
+        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
 
         # Standardize
-        for i in range(resized_shape[2]):
+        if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
+            resized = resized / 255
+
+        for i in range(resized.shape[2]):
             resized[:, :, i] = normalize(resized[:, :, i])
 
         return np.array(resized, dtype='float32')
@@ -339,23 +342,17 @@ class Dataset:
             image = imread(path)
             image = rgb2hsv(image)
 
-        # Resize
-        scale_factor = 0.5  # percent of original size
-        height = int(image.shape[0] * scale_factor)
-        width = int(image.shape[1] * scale_factor)
-
-        resized_shape = (height, width, image.shape[2])
-
-        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
-
         # Standardize
-        for i in range(resized_shape[2]):
-            resized[:, :, i] = normalize(resized[:, :, i])
+        if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
+            image = image / 255
 
-        resized = np.array(resized)
+        for i in range(image.shape[2]):
+            image[:, :, i] = normalize(image[:, :, i])
 
-        # Extract the correct patch from the image
-        patch = resized[(row - 1) * 64:(row * 64), (col - 1) * 64:(col * 64), :]
+        image = np.array(image)
+
+        # Extract the correct patch 128x128 from the image
+        patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
 
         return np.array(patch, dtype='float32')
 
@@ -372,40 +369,78 @@ class Dataset:
 
         return image
 
-    def load_data_blob(self, split, index):
+    def load_data_thresh(self, split, index):
 
         # print("Extracting BLOB feature from image #{}".format(index))
 
         image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
 
         if self._color_space == 'HSV':
-            gray = image[:, :, 1]  # saturation channel
-            gray = np.expand_dims(gray, -1)
+            gray = image[:, :, 2]  # V channel
         elif self._color_space == 'RGB':
             gray = rgb2gray(image)
-            gray = np.expand_dims(gray, -1)
         else:
-            gray = image
+            gray = image[:, :, 0]
 
         thresh = threshold_otsu(image=gray)
+        binary = gray < thresh
 
-        binarized = gray < thresh
+        # plt.figure(figsize=(10, 5))
+        #
+        # plt.subplot(2, 2, 1)
+        # plt.imshow(gray)
+        # plt.subplot(2, 2, 2)
+        # plt.imshow(binary)
+        # plt.show()
 
-        return np.array(binarized, dtype='float32')
+        binary = np.expand_dims(binary, -1)
+
+        return np.array(binary, dtype='float32')
+
+    # def load_data_hog(self, split, index):
+    #
+    #     # print("Extracting BLOB feature from image #{}".format(index))
+    #     multi_channel = False
+    #
+    #     image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
+    #
+    #     if self._color_space in ['HSV', 'RGB']:
+    #         multi_channel = True
+    #     else:
+    #         image = image[:, :, 0]
+    #
+    #     features, hog_image = hog(image, orientations=9, pixels_per_cell=(16, 16), cells_per_block=(2, 2), visualize=True,
+    #                           multichannel=multi_channel)
+    #
+    #     plt.figure(figsize=(10, 5))
+    #
+    #     plt.subplot(2, 2, 1)
+    #     plt.imshow(image)
+    #     plt.subplot(2, 2, 2)
+    #     plt.imshow(hog_image)
+    #     plt.show()
+    #
+    #     print(features)
+    #     print(features.shape)
+    #     exit()
+    #     return np.array(features, dtype='float32')
+
 
     def load_data_pca(self, split, index, components=32):
 
         # print("Extracting PCA feature from image #{}".format(index))
-
-        image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
-
-        x, y, n = image.shape
+        if self._mode == 'FULL':
+            image = self.load_data(split, index)
+            components = 128
+        else:
+            image = self.load_patch_data(split, index)
 
         # Extraction of the first 'components' principal components of the images
-        pc_image = np.zeros([image.shape[0], components, n])
-        for i in range(n):
+        pc_image = np.zeros([image.shape[0], components, image.shape[2]])
+        for i in range(image.shape[2]):
             pca = PCA(n_components=components)  # we need K principal components.
             pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
+            # print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
 
         return pc_image.astype(np.float32)
 
@@ -415,27 +450,31 @@ class Dataset:
 
         image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
 
-        _, _, n = image.shape
+        if self._color_space == 'HSV':
+            image = image[:, :, 2]
+            image = np.expand_dims(image, axis=-1)
 
         approx_channel = []
 
-        if self._color_space == 'HSV':
+        for channel in range(image.shape[2]):
+            cA, (cH, cV, cD) = pywt.dwt2(image[:, :, channel], 'sym5')
+            approx_channel.append(cA)
 
-            ca, _ = pywt.dwt(image[:, :, 0], 'sym5')  # hue
-            approx_channel.append(ca)
-            ca, _ = pywt.dwt(image[:, :, 2], 'sym5')  # val
-            approx_channel.append(ca)
-
-        else:
-
-            for channel in range(n):
-                # For the image coming from each channel, extract the corresponding wavelet decomposition
-                ca, _ = pywt.dwt(image[:, :, channel], 'sym5')
-                approx_channel.append(ca)
+            # plt.figure(figsize=(30, 30))
+            #
+            # plt.subplot(2, 2, 1)
+            # plt.imshow(cA)
+            # plt.subplot(2, 2, 2)
+            # plt.imshow(cH)
+            # plt.subplot(2, 2, 3)
+            # plt.imshow(cV)
+            # plt.subplot(2, 2, 4)
+            # plt.imshow(cD)
+            #
+            # plt.show()
 
         n, x, y = np.array(approx_channel).shape
         approx_channel = np.array(approx_channel).reshape((x, y, n))
-        # print(approx_channel.shape)
 
         return np.array(approx_channel)
 
@@ -460,7 +499,3 @@ class Dataset:
             plt.imshow(image)
 
         plt.show()  # finally, render the plot
-
-    # @property
-    # def dim(self):
-    #     return self._dim

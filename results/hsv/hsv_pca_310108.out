@@ -97,3 +97,153 @@ _________________________________________________________________
 Model fit ...
 Epoch 1/50
 97/97 - 688s - loss: 1.1035 - accuracy: 0.3595 - val_loss: 1.0977 - val_accuracy: 0.3642
+Epoch 2/50
+97/97 - 680s - loss: 1.0578 - accuracy: 0.3814 - val_loss: 1.1143 - val_accuracy: 0.3265
+Epoch 3/50
+97/97 - 656s - loss: 0.9561 - accuracy: 0.5155 - val_loss: 1.1956 - val_accuracy: 0.3362
+Epoch 4/50
+97/97 - 616s - loss: 0.7948 - accuracy: 0.6082 - val_loss: 1.3529 - val_accuracy: 0.3319
+Epoch 5/50
+97/97 - 597s - loss: 0.6392 - accuracy: 0.6856 - val_loss: 1.4600 - val_accuracy: 0.3394
+Epoch 6/50
+97/97 - 623s - loss: 0.5254 - accuracy: 0.7526 - val_loss: 1.5230 - val_accuracy: 0.3631
+Epoch 7/50
+97/97 - 638s - loss: 0.4479 - accuracy: 0.8028 - val_loss: 1.6949 - val_accuracy: 0.3341
+Epoch 8/50
+97/97 - 669s - loss: 0.3736 - accuracy: 0.8502 - val_loss: 1.5993 - val_accuracy: 0.3416
+Epoch 9/50
+97/97 - 673s - loss: 0.2538 - accuracy: 0.9069 - val_loss: 1.8481 - val_accuracy: 0.3664
+Epoch 10/50
+97/97 - 675s - loss: 0.1980 - accuracy: 0.9275 - val_loss: 2.2581 - val_accuracy: 0.3287
+Epoch 11/50
+97/97 - 673s - loss: 0.1541 - accuracy: 0.9462 - val_loss: 2.5322 - val_accuracy: 0.3308
+Epoch 12/50
+97/97 - 673s - loss: 0.1218 - accuracy: 0.9572 - val_loss: 2.4936 - val_accuracy: 0.3470
+Epoch 13/50
+97/97 - 675s - loss: 0.0804 - accuracy: 0.9736 - val_loss: 3.0149 - val_accuracy: 0.3524
+Epoch 14/50
+97/97 - 675s - loss: 0.0494 - accuracy: 0.9839 - val_loss: 3.2228 - val_accuracy: 0.3621
+Epoch 15/50
+97/97 - 631s - loss: 0.0300 - accuracy: 0.9894 - val_loss: 3.5564 - val_accuracy: 0.3567
+Epoch 16/50
+97/97 - 623s - loss: 0.0691 - accuracy: 0.9762 - val_loss: 2.5883 - val_accuracy: 0.3513
+Epoch 17/50
+97/97 - 626s - loss: 0.0373 - accuracy: 0.9871 - val_loss: 3.6853 - val_accuracy: 0.3642
+Epoch 18/50
+97/97 - 624s - loss: 0.0259 - accuracy: 0.9913 - val_loss: 3.8775 - val_accuracy: 0.3707
+Epoch 19/50
+97/97 - 625s - loss: 0.0326 - accuracy: 0.9916 - val_loss: 3.0966 - val_accuracy: 0.3438
+Epoch 20/50
+97/97 - 624s - loss: 0.0379 - accuracy: 0.9884 - val_loss: 3.1455 - val_accuracy: 0.3685
+Epoch 21/50
+97/97 - 621s - loss: 0.0381 - accuracy: 0.9881 - val_loss: 3.4647 - val_accuracy: 0.3470
+Epoch 22/50
+97/97 - 565s - loss: 0.0367 - accuracy: 0.9913 - val_loss: 3.7389 - val_accuracy: 0.3664
+Epoch 23/50
+97/97 - 565s - loss: 0.0253 - accuracy: 0.9913 - val_loss: 3.5439 - val_accuracy: 0.3459
+Epoch 24/50
+97/97 - 563s - loss: 0.0198 - accuracy: 0.9952 - val_loss: 3.3493 - val_accuracy: 0.3815
+Epoch 25/50
+97/97 - 567s - loss: 0.0282 - accuracy: 0.9939 - val_loss: 3.2160 - val_accuracy: 0.3556
+Epoch 26/50
+97/97 - 567s - loss: 0.0128 - accuracy: 0.9955 - val_loss: 3.4838 - val_accuracy: 0.3588
+Epoch 27/50
+97/97 - 564s - loss: 0.0085 - accuracy: 0.9990 - val_loss: 4.3271 - val_accuracy: 0.3599
+Epoch 28/50
+97/97 - 562s - loss: 0.0065 - accuracy: 0.9984 - val_loss: 4.2292 - val_accuracy: 0.3481
+Epoch 29/50
+97/97 - 561s - loss: 0.0033 - accuracy: 0.9987 - val_loss: 4.8044 - val_accuracy: 0.3556
+Epoch 30/50
+97/97 - 561s - loss: 0.0093 - accuracy: 0.9984 - val_loss: 4.3275 - val_accuracy: 0.3427
+Epoch 31/50
+97/97 - 548s - loss: 0.0074 - accuracy: 0.9981 - val_loss: 4.3336 - val_accuracy: 0.3394
+Epoch 32/50
+97/97 - 551s - loss: 0.0118 - accuracy: 0.9977 - val_loss: 4.0534 - val_accuracy: 0.3481
+Epoch 33/50
+97/97 - 555s - loss: 0.0017 - accuracy: 0.9997 - val_loss: 5.3976 - val_accuracy: 0.3524
+Epoch 34/50
+97/97 - 546s - loss: 0.0307 - accuracy: 0.9913 - val_loss: 3.8812 - val_accuracy: 0.3524
+Epoch 00034: early stopping
+Model save ...
+Model saved!
+Running D-CNN
+
+Model build ...
+Model: "deep_cnn_FULL_HSV_PCA"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+input (InputLayer)           [(None, 104, 32, 3)]      0         
+_________________________________________________________________
+conv64 (Conv2D)              (None, 104, 32, 64)       1792      
+_________________________________________________________________
+activation (Activation)      (None, 104, 32, 64)       0         
+_________________________________________________________________
+dropout (Dropout)            (None, 104, 32, 64)       0         
+_________________________________________________________________
+conv128 (Conv2D)             (None, 104, 32, 128)      73856     
+_________________________________________________________________
+activation_1 (Activation)    (None, 104, 32, 128)      0         
+_________________________________________________________________
+dropout_1 (Dropout)          (None, 104, 32, 128)      0         
+_________________________________________________________________
+conv256 (Conv2D)             (None, 104, 32, 256)      295168    
+_________________________________________________________________
+activation_2 (Activation)    (None, 104, 32, 256)      0         
+_________________________________________________________________
+dropout_2 (Dropout)          (None, 104, 32, 256)      0         
+_________________________________________________________________
+max_pooling2d (MaxPooling2D) (None, 52, 16, 256)       0         
+_________________________________________________________________
+flatten (Flatten)            (None, 212992)            0         
+_________________________________________________________________
+fc128_A (Dense)              (None, 128)               27263104  
+_________________________________________________________________
+activation_3 (Activation)    (None, 128)               0         
+_________________________________________________________________
+dropout_3 (Dropout)          (None, 128)               0         
+_________________________________________________________________
+fc128_B (Dense)              (None, 128)               16512     
+_________________________________________________________________
+activation_4 (Activation)    (None, 128)               0         
+_________________________________________________________________
+dropout_4 (Dropout)          (None, 128)               0         
+_________________________________________________________________
+fc128_C (Dense)              (None, 128)               16512     
+_________________________________________________________________
+activation_5 (Activation)    (None, 128)               0         
+_________________________________________________________________
+dropout_5 (Dropout)          (None, 128)               0         
+_________________________________________________________________
+fc (Dense)                   (None, 3)                 387       
+=================================================================
+Total params: 27,667,331
+Trainable params: 27,667,331
+Non-trainable params: 0
+_________________________________________________________________
+Model fit ...
+Epoch 1/50
+97/97 - 556s - loss: 1.4229 - accuracy: 0.3502 - val_loss: 58.6846 - val_accuracy: 0.3534
+Epoch 2/50
+97/97 - 562s - loss: 1.1014 - accuracy: 0.3686 - val_loss: 147.4591 - val_accuracy: 0.3534
+Epoch 3/50
+97/97 - 558s - loss: 1.0991 - accuracy: 0.3744 - val_loss: 237.3954 - val_accuracy: 0.3534
+Epoch 4/50
+97/97 - 559s - loss: 1.0988 - accuracy: 0.3734 - val_loss: 327.2060 - val_accuracy: 0.3534
+Epoch 5/50
+97/97 - 557s - loss: 1.0991 - accuracy: 0.3721 - val_loss: 417.8794 - val_accuracy: 0.3534
+Epoch 6/50
+97/97 - 558s - loss: 1.0970 - accuracy: 0.3756 - val_loss: 498.2045 - val_accuracy: 0.3534
+Epoch 7/50
+97/97 - 568s - loss: 1.0986 - accuracy: 0.3715 - val_loss: 584.4174 - val_accuracy: 0.3534
+Epoch 8/50
+97/97 - 579s - loss: 1.0987 - accuracy: 0.3753 - val_loss: 661.5494 - val_accuracy: 0.3534
+Epoch 9/50
+97/97 - 563s - loss: 1.0989 - accuracy: 0.3695 - val_loss: 716.9013 - val_accuracy: 0.3534
+Epoch 10/50
+97/97 - 560s - loss: 1.0990 - accuracy: 0.3702 - val_loss: 799.1022 - val_accuracy: 0.3534
+Epoch 11/50
+97/97 - 559s - loss: 1.0980 - accuracy: 0.3724 - val_loss: 842.5114 - val_accuracy: 0.3534
+Epoch 00011: early stopping
+Model save ...
+Model saved!

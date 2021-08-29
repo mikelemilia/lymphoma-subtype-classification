@@ -17,7 +17,7 @@ def parse_input():
 
     # Add arguments
     parser.add_argument('-f', '--folder', type=str, default='data', help='dataset folder path')
-    parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN')
+    parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN, IN-V3')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
     parser.add_argument('-e', '--extra', type=str, default='-',
@@ -33,7 +33,7 @@ def parse_input():
     else:
         f = args.folder
 
-    if str(args.arch).upper() not in ['CNN', 'DNN', 'D-CNN', 'AE-DNN', 'RNN']:
+    if str(args.arch).upper() not in ['CNN', 'DNN', 'D-CNN', 'AE-DNN']:
         print('You must select a valid implemented architecture. Valid options are: CNN, D-CNN, AE-DNN.',
               file=sys.stderr)
         exit(-1)
@@ -141,7 +141,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        model.predict(dataframe=test, test=test_dataset, loader=loader)
+        # model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     if architecture == 'DNN':
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        model.predict(dataframe=test, test=test_dataset, loader=loader)
+        # model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'D-CNN':
 
@@ -165,7 +165,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        model.predict(dataframe=test, test=test_dataset, loader=loader)
+        # model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'AE-DNN':
 

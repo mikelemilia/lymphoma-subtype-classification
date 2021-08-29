@@ -69,3 +69,43 @@ coreClock: 1.4805GHz coreCount: 8 deviceMemorySize: 4.94GiB deviceMemoryBandwidt
 2021-08-28 13:46:30.417297: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x558d3311a0d0 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
 2021-08-28 13:46:30.417315: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Quadro P2000, Compute Capability 6.1
 2021-08-28 13:46:32.123293: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2021-08-28 15:30:46.294269: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcuda.so.1
+2021-08-28 15:30:47.113599: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 0 with properties: 
+pciBusID: 0000:45:00.0 name: Quadro P2000 computeCapability: 6.1
+coreClock: 1.4805GHz coreCount: 8 deviceMemorySize: 4.94GiB deviceMemoryBandwidth: 130.53GiB/s
+2021-08-28 15:30:47.114804: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudart.so.10.1
+2021-08-28 15:30:47.118266: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2021-08-28 15:30:47.121229: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcufft.so.10
+2021-08-28 15:30:47.122340: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcurand.so.10
+2021-08-28 15:30:47.125071: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusolver.so.10
+2021-08-28 15:30:47.126496: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusparse.so.10
+2021-08-28 15:30:47.131437: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudnn.so.7
+2021-08-28 15:30:47.132097: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1703] Adding visible gpu devices: 0
+2021-08-28 15:30:47.132436: I tensorflow/core/platform/cpu_feature_guard.cc:143] Your CPU supports instructions that this TensorFlow binary was not compiled to use: SSE4.1 SSE4.2 AVX AVX2 AVX512F FMA
+2021-08-28 15:30:47.151608: I tensorflow/core/platform/profile_utils/cpu_utils.cc:102] CPU Frequency: 2200000000 Hz
+2021-08-28 15:30:47.152645: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x556d1c61b580 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+2021-08-28 15:30:47.152665: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Host, Default Version
+2021-08-28 15:30:47.153118: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1561] Found device 0 with properties: 
+pciBusID: 0000:45:00.0 name: Quadro P2000 computeCapability: 6.1
+coreClock: 1.4805GHz coreCount: 8 deviceMemorySize: 4.94GiB deviceMemoryBandwidth: 130.53GiB/s
+2021-08-28 15:30:47.153152: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudart.so.10.1
+2021-08-28 15:30:47.153167: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2021-08-28 15:30:47.153179: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcufft.so.10
+2021-08-28 15:30:47.153191: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcurand.so.10
+2021-08-28 15:30:47.153203: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusolver.so.10
+2021-08-28 15:30:47.153215: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcusparse.so.10
+2021-08-28 15:30:47.153230: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudnn.so.7
+2021-08-28 15:30:47.153810: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1703] Adding visible gpu devices: 0
+2021-08-28 15:30:47.153853: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudart.so.10.1
+2021-08-28 15:30:47.242251: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1102] Device interconnect StreamExecutor with strength 1 edge matrix:
+2021-08-28 15:30:47.242284: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1108]      0 
+2021-08-28 15:30:47.242289: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1121] 0:   N 
+2021-08-28 15:30:47.243338: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1247] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 4703 MB memory) -> physical GPU (device: 0, name: Quadro P2000, pci bus id: 0000:45:00.0, compute capability: 6.1)
+2021-08-28 15:30:47.245911: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x556d1d953af0 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2021-08-28 15:30:47.245930: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): Quadro P2000, Compute Capability 6.1
+2021-08-28 15:30:49.197382: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcublas.so.10
+2021-08-28 15:31:05.223711: I tensorflow/stream_executor/platform/default/dso_loader.cc:44] Successfully opened dynamic library libcudnn.so.7
+2021-08-28 15:31:06.859901: W tensorflow/core/common_runtime/bfc_allocator.cc:245] Allocator (GPU_0_bfc) ran out of memory trying to allocate 1.99GiB with freed_by_count=0. The caller indicates that this is not a failure, but may mean that there could be performance gains if more memory were available.
+2021-08-28 15:31:06.997900: W tensorflow/core/common_runtime/bfc_allocator.cc:245] Allocator (GPU_0_bfc) ran out of memory trying to allocate 1.52GiB with freed_by_count=0. The caller indicates that this is not a failure, but may mean that there could be performance gains if more memory were available.
+2021-08-28 15:31:07.466844: W tensorflow/core/common_runtime/bfc_allocator.cc:245] Allocator (GPU_0_bfc) ran out of memory trying to allocate 1.52GiB with freed_by_count=0. The caller indicates that this is not a failure, but may mean that there could be performance gains if more memory were available.
+2021-08-28 15:31:07.815939: W tensorflow/core/common_runtime/bfc_allocator.cc:245] Allocator (GPU_0_bfc) ran out of memory trying to allocate 1.52GiB with freed_by_count=0. The caller indicates that this is not a failure, but may mean that there could be performance gains if more memory were available.
