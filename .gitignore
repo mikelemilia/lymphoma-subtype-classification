@@ -129,7 +129,9 @@ dmypy.json
 
 .idea/
 
-*.tar.gz
 
 output
+results
+
 *.csv
+*.tar.gz

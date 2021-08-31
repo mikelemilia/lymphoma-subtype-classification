@@ -20,8 +20,8 @@ def parse_input():
     parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN, IN-V3')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
-    parser.add_argument('-e', '--extra', type=str, default='-',
-                        help='extracted features, it can be CANNY, PCA, WAV, BLOB')
+    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, WAV, BLOB')
+    parser.add_argument('--train', action='store_true')
 
     # Retrieve arguments value
     args = parser.parse_args()
@@ -58,12 +58,14 @@ def parse_input():
     else:
         e = str(args.extra).upper()
 
-    return f, a, m, c, e
+    t = args.train
+
+    return f, a, m, c, e, t
 
 
 if __name__ == '__main__':
 
-    data, architecture, mode, color_space, feature_extracted = parse_input()
+    data, architecture, mode, color_space, feature_extracted, is_training = parse_input()
 
     name = '{}_{}'.format(mode, color_space) if feature_extracted == '-' else '{}_{}_{}'.format(mode, color_space, feature_extracted)
 
@@ -75,7 +77,7 @@ if __name__ == '__main__':
     val_dataset_nolabel = None
 
     # Dataset initialization
-    dataset = Dataset(folder=data, mode=mode, color_space=color_space, feature=feature_extracted)
+    dataset = Dataset(folder=data, mode=mode, color_space=color_space, feature=feature_extracted, is_training=is_training)
     # print('Selected architecture : {}'.format(architecture))
 
     dataset.generate_base_dataframe()
@@ -90,7 +92,7 @@ if __name__ == '__main__':
 
     data = None
     batch_size = 32
-    num_epochs = 50
+    num_epochs = 1
     patched = False
 
     if mode == 'FULL':
@@ -141,7 +143,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        # model.predict(dataframe=test, test=test_dataset, loader=loader)
+        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     if architecture == 'DNN':
 
@@ -153,7 +155,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        # model.predict(dataframe=test, test=test_dataset, loader=loader)
+        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'D-CNN':
 
@@ -165,7 +167,7 @@ if __name__ == '__main__':
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 
-        # model.predict(dataframe=test, test=test_dataset, loader=loader)
+        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'AE-DNN':
 

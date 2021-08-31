@@ -20,13 +20,14 @@ from tqdm import tqdm
 
 class Dataset:
 
-    def __init__(self, folder, mode, color_space, feature):
+    def __init__(self, folder, mode, color_space, feature, is_training: bool = False):
 
         # Parameter
         self._folder = os.path.join(os.getcwd(), folder)
         self._mode = mode
         self._color_space = color_space
         self._feature_extracted = feature
+        self._is_training = is_training
 
         # print('Selected folder : {}'.format(self._folder))
         # print('Selected mode : {}'.format(self._mode))
@@ -213,7 +214,9 @@ class Dataset:
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes))
-        dataset = dataset.repeat()
+
+        if self._is_training:
+            dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
@@ -245,7 +248,9 @@ class Dataset:
         # Operations for shuffling and batching of the dataset
         if shuffle:
             dataset = dataset.shuffle(len(data_indexes_in))
-        dataset = dataset.repeat()
+
+        if self._is_training:
+            dataset = dataset.repeat()
 
         dataset = dataset.batch(batch_size=batch_size)
         dataset = dataset.prefetch(buffer_size=1)
@@ -301,6 +306,9 @@ class Dataset:
         elif 'ROT' in trans.split('_')[0]:
             image = rotate(image, int(trans.split('_')[1]))
 
+        # Convert image to array
+        image = np.array(image, dtype='float32')
+
         # Resize
         scale_factor = 0.3  # percent of original size
         height = int(image.shape[0] * scale_factor)
@@ -310,12 +318,13 @@ class Dataset:
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
 
-        # Standardize
+        # Normalize pixel values between [0, 1]
         if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-            resized = resized / 255
+            resized /= 255.0
 
-        for i in range(resized.shape[2]):
-            resized[:, :, i] = normalize(resized[:, :, i])
+        # Standardize pixel value in order to get mean 0 and standard deviation 1
+        mean, std = resized.mean(), resized.std()
+        resized = (resized - mean) / std
 
         return np.array(resized, dtype='float32')
 
@@ -342,14 +351,16 @@ class Dataset:
             image = imread(path)
             image = rgb2hsv(image)
 
-        # Standardize
+        # Convert image to array
+        image = np.array(image, dtype='float32')
+
+        # Normalize pixel values between [0, 1]
         if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-            image = image / 255
+            image /= 255.0
 
-        for i in range(image.shape[2]):
-            image[:, :, i] = normalize(image[:, :, i])
-
-        image = np.array(image)
+        # Standardize pixel value in order to get mean 0 and standard deviation 1
+        mean, std = image.mean(), image.std()
+        image = (image - mean) / std
 
         # Extract the correct patch 128x128 from the image
         patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
@@ -424,7 +435,6 @@ class Dataset:
     #     print(features.shape)
     #     exit()
     #     return np.array(features, dtype='float32')
-
 
     def load_data_pca(self, split, index, components=32):
 
