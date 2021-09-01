@@ -91,9 +91,9 @@ if __name__ == '__main__':
     loader = dataset.select_loader()
 
     data = None
-    batch_size = 32
-    num_epochs = 1
     patched = False
+    batch_size = None
+    num_epochs = 50
 
     if mode == 'FULL':
 
@@ -101,6 +101,8 @@ if __name__ == '__main__':
         train = dataset.generate_augmented_dataframe(split=0, name='train')
         val = dataset.generate_augmented_dataframe(split=1, name='val')
         test = dataset.generate_augmented_dataframe(split=2, name='test')
+
+        batch_size = 32
 
         # print('\nAugmented training set : {} images'.format(len(train)))
         # print('Augmented validation set  : {} images'.format(len(val)))
@@ -114,6 +116,7 @@ if __name__ == '__main__':
         test = dataset.generate_patch_dataframe(split=2, name='test')
 
         patched = True
+        batch_size = 96
 
         # print('\nPatched training set : {} images'.format(len(train)))
         # print('Patched validation set  : {} images'.format(len(val)))
@@ -133,41 +136,34 @@ if __name__ == '__main__':
     model = None
 
     # Check selected architecture
-    if architecture == 'CNN':
+    if architecture in ['CNN', 'D-CNN']:
 
-        model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
+        if architecture == 'CNN':
+            model = CNN(name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
+        else:
+            model = DCNN(name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
 
-        if not model.is_loaded:
+        if model.is_loaded:
+            model.predict(dataframe=test, test=test_dataset, loader=loader)
+
+        else:
             model.build()
             model.fit(train=train_dataset, validation=val_dataset, num_epochs=num_epochs,
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
-
-        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     if architecture == 'DNN':
 
         model = DNN(name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
 
-        if not model.is_loaded:
+        if model.is_loaded:
+            model.predict(dataframe=test, test=test_dataset, loader=loader)
+
+        else:
             model.build(hidden_units=[1024, 512, 256, 128, 64])
             model.fit(train=train_dataset, validation=val_dataset, num_epochs=num_epochs,
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
-
-        model.predict(dataframe=test, test=test_dataset, loader=loader)
-
-    elif architecture == 'D-CNN':
-
-        model = DCNN(name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
-
-        if not model.is_loaded:
-            model.build()
-            model.fit(train=train_dataset, validation=val_dataset, num_epochs=num_epochs,
-                      steps=[len(train) // batch_size, len(val) // batch_size])
-            model.save()
-
-        model.predict(dataframe=test, test=test_dataset, loader=loader)
 
     elif architecture == 'AE-DNN':
 

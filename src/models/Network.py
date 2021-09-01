@@ -7,7 +7,6 @@ from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 
-
 class NeuralNetwork:
 
     def __init__(self, name, classes, shape, batch_size=32, patched_image: bool = False):
@@ -50,7 +49,7 @@ class NeuralNetwork:
             epochs=num_epochs,
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
-            verbose=1,
+            verbose=2,
             callbacks=[reduce_lr, early_stop]
         )
 
@@ -140,6 +139,7 @@ class NeuralNetwork:
 
     # Useful plot
     def plot_accuracy_curve(self):
+
         plt.plot(self._history.history['accuracy'], 'b', linewidth=3.0, label='Training accuracy')
         plt.plot(self._history.history['val_accuracy'], 'r', linewidth=3.0, label='Validation accuracy')
         plt.xlabel('Iteration', fontsize=16)
@@ -147,7 +147,7 @@ class NeuralNetwork:
         plt.legend()
         plt.title('Training Accuracy', fontsize=16)
         plt.savefig('plot/{}_training_accuracy.png'.format(self._name))
-        plt.show()
+        plt.close()
 
     def plot_learning_curve(self):
         plt.plot(self._history.history['loss'], 'b', linewidth=3.0, label='Training loss')
@@ -157,7 +157,7 @@ class NeuralNetwork:
         plt.legend()
         plt.title('Learning Curve', fontsize=16)
         plt.savefig('plot/{}_learning_curve.png'.format(self._name))
-        plt.show()
+        plt.close()
 
     def plot_confusion_matrix(self, cm, classes,
                               normalize=False,

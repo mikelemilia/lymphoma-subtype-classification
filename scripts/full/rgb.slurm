@@ -8,7 +8,7 @@
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
 
 #SBATCH -n 1
-#SBATCH -c 8
+#SBATCH -c 16
 #SBATCH -p allgroups
 #SBATCH -t 3-12:00:00
 #SBATCH --mem 75G
@@ -27,17 +27,15 @@ source /nfsd/opt/anaconda3/anaconda3.sh
 conda activate /nfsd/signet/hda_env_gpu
 
 # run code
-#echo "Running CNN"
-#echo ""
-#srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL
-
-#echo "Running DNN"
-#echo ""
-#srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL
-
-echo "Running D-CNN"
+echo "Running CNN"
 echo ""
-srun python $DIRECTORY/src/main.py --train -f $DATA -a D-CNN -c RGB -m FULL
+srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL --train
+srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL
+
+echo "Running DNN"
+echo ""
+srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL --train
+srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL
 
 # deactivate environment at the end of the job
 conda deactivate

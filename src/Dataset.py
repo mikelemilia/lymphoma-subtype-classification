@@ -14,7 +14,7 @@ from skimage.transform import resize, rotate
 from skimage.util import random_noise
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, normalize
+from sklearn.preprocessing import OneHotEncoder
 from tqdm import tqdm
 
 
@@ -148,7 +148,7 @@ class Dataset:
 
         # Add the pair [row, col] for each patch
         names = ['row', 'col']
-        dims = [8, 10]
+        dims = [32, 40]
         for k in range(2):
             row = df.shape[0]
 
@@ -310,7 +310,7 @@ class Dataset:
         image = np.array(image, dtype='float32')
 
         # Resize
-        scale_factor = 0.3  # percent of original size
+        scale_factor = 0.5
         height = int(image.shape[0] * scale_factor)
         width = int(image.shape[1] * scale_factor)
 
@@ -363,7 +363,7 @@ class Dataset:
         image = (image - mean) / std
 
         # Extract the correct patch 128x128 from the image
-        patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
+        patch = image[(row - 1) * 32:(row * 32), (col - 1) * 32:(col * 32), :]
 
         return np.array(patch, dtype='float32')
 
@@ -378,7 +378,7 @@ class Dataset:
             low, high = threshold_multiotsu(image=blur)
             image[:, :, i] = canny(blur, sigma=1, low_threshold=low, high_threshold=high)
 
-        return image
+        return np.array(image, dtype='float32')
 
     def load_data_thresh(self, split, index):
 
@@ -436,7 +436,7 @@ class Dataset:
     #     exit()
     #     return np.array(features, dtype='float32')
 
-    def load_data_pca(self, split, index, components=32):
+    def load_data_pca(self, split, index, components=16):
 
         # print("Extracting PCA feature from image #{}".format(index))
         if self._mode == 'FULL':
@@ -452,7 +452,7 @@ class Dataset:
             pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
             # print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
 
-        return pc_image.astype(np.float32)
+        return np.array(pc_image, dtype='float32')
 
     def load_data_wavelet(self, split, index):
 
@@ -464,11 +464,11 @@ class Dataset:
             image = image[:, :, 2]
             image = np.expand_dims(image, axis=-1)
 
-        approx_channel = []
+        approx = []
 
         for channel in range(image.shape[2]):
             cA, (cH, cV, cD) = pywt.dwt2(image[:, :, channel], 'sym5')
-            approx_channel.append(cA)
+            approx.append(cA)
 
             # plt.figure(figsize=(30, 30))
             #
@@ -483,10 +483,10 @@ class Dataset:
             #
             # plt.show()
 
-        n, x, y = np.array(approx_channel).shape
-        approx_channel = np.array(approx_channel).reshape((x, y, n))
+        n, x, y = np.array(approx).shape
+        approx = np.array(approx).reshape((x, y, n))
 
-        return np.array(approx_channel)
+        return np.array(approx, dtype='float32')
 
     def random_plot(self):
 

@@ -29,15 +29,13 @@ conda activate /nfsd/signet/hda_env_gpu
 # run code
 echo "Running CNN"
 echo ""
+srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL -e BLOB --train
 srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m FULL -e BLOB
 
 echo "Running DNN"
 echo ""
+srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL -e BLOB --train
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m FULL -e BLOB
-
-echo "Running D-CNN"
-echo ""
-srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m FULL -e BLOB
 
 # deactivate environment at the end of the job
 conda deactivate
