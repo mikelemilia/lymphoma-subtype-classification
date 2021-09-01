@@ -21,23 +21,13 @@ class Convolutional(NeuralNetwork):
                    data_format='channels_last', use_bias=True,
                    activation='relu',
                    padding='same',
-                   name='conv32')(x_input)
-
-        x = MaxPool2D(pool_size=2)(x)
-        x = Dropout(rate=0.25)(x)
-
-        # Layer with 64x64 Conv2D
-        x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1),
-                   data_format='channels_last', use_bias=True,
-                   activation='relu',
-                   padding='same',
-                   name='conv64')(x)
+                   name='conv64')(x_input)
 
         x = MaxPool2D(pool_size=2)(x)
         x = Dropout(rate=0.25)(x)
 
         # Layer with 128x128 Conv2D
-        x = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1),
+        x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1),
                    data_format='channels_last', use_bias=True,
                    activation='relu',
                    padding='same',
@@ -50,7 +40,7 @@ class Convolutional(NeuralNetwork):
 
         x = Dense(256, name='fc256')(x)
         x = Activation('relu')(x)
-        x = Dropout(rate=0.5)(x)
+        x = Dropout(rate=0.25)(x)
 
         x = Dense(self._classes, activation='softmax', name='fc')(x)
 

@@ -30,7 +30,7 @@ class DeepConvolutional(NeuralNetwork):
                    padding='same',
                    name='conv64_B')(x)
 
-        # x = MaxPool2D(pool_size=2)(x)
+        x = MaxPool2D(pool_size=2)(x)
         x = Dropout(rate=0.25)(x)
 
         # Layer with 128x128 Conv2D
@@ -47,31 +47,31 @@ class DeepConvolutional(NeuralNetwork):
                    padding='same',
                    name='conv128_B')(x)
 
-        # x = MaxPool2D(pool_size=2)(x)
-        x = Dropout(rate=0.25)(x)
-
-        # Layer with 256x256 Conv2D
-        x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1),
-                   data_format='channels_last', use_bias=True,
-                   activation='relu',
-                   padding='same',
-                   name='conv256_A')(x)
-
-        # Layer with 128x128 Conv2D
-        x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1),
-                   data_format='channels_last', use_bias=True,
-                   activation='relu',
-                   padding='same',
-                   name='conv256_B')(x)
-
         x = MaxPool2D(pool_size=2)(x)
         x = Dropout(rate=0.25)(x)
 
+        # # Layer with 256x256 Conv2D
+        # x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1),
+        #            data_format='channels_last', use_bias=True,
+        #            activation='relu',
+        #            padding='same',
+        #            name='conv256_A')(x)
+        #
+        # # Layer with 128x128 Conv2D
+        # x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1),
+        #            data_format='channels_last', use_bias=True,
+        #            activation='relu',
+        #            padding='same',
+        #            name='conv256_B')(x)
+        #
+        # x = MaxPool2D(pool_size=2)(x)
+        # x = Dropout(rate=0.25)(x)
+
         x = Flatten()(x)
 
-        x = Dense(512, name='fc512', activation='relu')(x)
+        x = Dense(256, name='fc256', activation='relu')(x)
 
-        x = Dropout(rate=0.5)(x)
+        x = Dropout(rate=0.25)(x)
 
         x = Dense(self._classes, activation='softmax', name='fc')(x)
 

@@ -17,7 +17,7 @@ def parse_input():
 
     # Add arguments
     parser.add_argument('-f', '--folder', type=str, default='data', help='dataset folder path')
-    parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN, IN-V3')
+    parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
     parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, WAV, BLOB')
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         test = dataset.generate_patch_dataframe(split=2, name='test')
 
         patched = True
-        batch_size = 96
+        batch_size = 32
 
         # print('\nPatched training set : {} images'.format(len(train)))
         # print('Patched validation set  : {} images'.format(len(val)))

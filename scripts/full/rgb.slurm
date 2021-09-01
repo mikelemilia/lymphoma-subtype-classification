@@ -8,7 +8,7 @@
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
 
 #SBATCH -n 1
-#SBATCH -c 16
+#SBATCH -c 8
 #SBATCH -p allgroups
 #SBATCH -t 3-12:00:00
 #SBATCH --mem 75G

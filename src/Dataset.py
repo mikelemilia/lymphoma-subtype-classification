@@ -148,7 +148,7 @@ class Dataset:
 
         # Add the pair [row, col] for each patch
         names = ['row', 'col']
-        dims = [32, 40]
+        dims = [8, 10]
         for k in range(2):
             row = df.shape[0]
 
@@ -310,13 +310,13 @@ class Dataset:
         image = np.array(image, dtype='float32')
 
         # Resize
-        scale_factor = 0.5
+        scale_factor = 0.3
         height = int(image.shape[0] * scale_factor)
         width = int(image.shape[1] * scale_factor)
 
         resized_shape = (height, width, image.shape[2])
 
-        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=False)
+        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
         # Normalize pixel values between [0, 1]
         if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
@@ -363,7 +363,7 @@ class Dataset:
         image = (image - mean) / std
 
         # Extract the correct patch 128x128 from the image
-        patch = image[(row - 1) * 32:(row * 32), (col - 1) * 32:(col * 32), :]
+        patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
 
         return np.array(patch, dtype='float32')
 
@@ -436,7 +436,7 @@ class Dataset:
     #     exit()
     #     return np.array(features, dtype='float32')
 
-    def load_data_pca(self, split, index, components=16):
+    def load_data_pca(self, split, index, components=64):
 
         # print("Extracting PCA feature from image #{}".format(index))
         if self._mode == 'FULL':

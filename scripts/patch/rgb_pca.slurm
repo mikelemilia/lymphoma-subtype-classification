@@ -27,6 +27,11 @@ source /nfsd/opt/anaconda3/anaconda3.sh
 conda activate /nfsd/signet/hda_env_gpu
 
 # run code
+echo "Running D-CNN"
+echo ""
+srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m PATCH -e PCA --train
+srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m PATCH -e PCA
+
 echo "Running CNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e PCA --train
@@ -36,11 +41,6 @@ echo "Running DNN"
 echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m PATCH -e PCA --train
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c RGB -m PATCH -e PCA
-
-echo "Running D-CNN"
-echo ""
-srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m PATCH -e PCA --train
-srun python $DIRECTORY/src/main.py -f $DATA -a D-CNN -c RGB -m PATCH -e PCA
 
 # deactivate environment at the end of the job
 conda deactivate
