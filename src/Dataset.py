@@ -318,13 +318,9 @@ class Dataset:
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
-        # # Standardize pixel value in order to get mean 0 and standard deviation 1
-        # mean, std = resized.mean(), resized.std()
-        # resized = (resized - mean) / std
-
-        # Normalize pixel values between [0, 1]
-        if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-            resized /= resized.max()
+        # Scale pixel values : RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
+        if self._color_space in ['RGB']:
+            resized /= 255.0
 
         return np.array(resized, dtype='float32')
 
@@ -354,13 +350,9 @@ class Dataset:
         # Convert image to array
         image = np.array(image, dtype='float32')
 
-        # # Standardize pixel value in order to get mean 0 and standard deviation 1
-        # mean, std = image.mean(), image.std()
-        # image = (image - mean) / std
-
-        # Normalize pixel values between [0, 1]
-        if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-            image /= image.max()
+        # Scale pixel values : RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
+        if self._color_space in ['RGB']:
+            image /= 255.0
 
         # Extract the correct patch 128x128 from the image
         patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
@@ -378,14 +370,15 @@ class Dataset:
         blur = gaussian(image, sigma=0.4, truncate=3.5, multichannel=True)
 
         if self._color_space == 'RGB':
-            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])
-            blur[:, :, 1] = equalize_adapthist(blur[:, :, 1])
-            blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])
+            blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])   # Blue
+            blur[:, :, 1] = equalize_adapthist(blur[:, :, 1])   # Green
+            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])   # Red
 
             # blur[:, :, 0] += canny(blur[:, :, 0], sigma=2)
 
         elif self._color_space == 'HSV':
-            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])
+            blur[:, :, 1] = equalize_adapthist(blur[:, :, 1])   # Saturation
+            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])   # Value
 
         else:
             blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])
@@ -405,18 +398,21 @@ class Dataset:
         else:
             image = self.load_patch_data(split, index)
 
+        # Standardize pixel value in order to get mean 0 and standard deviation 1
+        mean, std = image.mean(), image.std()
+        image = (image - mean) / std
+
         # Extraction of the first K PCs for each channel
         pc_image = np.zeros([image.shape[0], components, image.shape[2]])
-        x = np.zeros(image.shape, dtype='float32')
+        # x = np.zeros(image.shape, dtype='float32')
 
         for i in range(image.shape[2]):
             pca = PCA(n_components=components)
             pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
             # print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
 
-            # x[:, :, i] = pca.inverse_transform(pc_image[:, :, i])
+        #     x[:, :, i] = pca.inverse_transform(pc_image[:, :, i])
         # print(x.min(), x.max())
-        # plt.imshow(image)
         # plt.imshow(x)
         # plt.show()
         # exit()
@@ -439,18 +435,20 @@ class Dataset:
             cA, (cH, cV, cD) = pywt.dwt2(image[:, :, channel], 'sym5')
             approx.append(cA)
 
-            # plt.figure(figsize=(30, 30))
-            #
-            # plt.subplot(2, 2, 1)
-            # plt.imshow(cA)
-            # plt.subplot(2, 2, 2)
-            # plt.imshow(cH)
-            # plt.subplot(2, 2, 3)
-            # plt.imshow(cV)
-            # plt.subplot(2, 2, 4)
-            # plt.imshow(cD)
-            #
-            # plt.show()
+        #     plt.figure(figsize=(30, 30))
+        #
+        #     plt.subplot(2, 2, 1)
+        #     plt.imshow(cA)
+        #     plt.subplot(2, 2, 2)
+        #     plt.imshow(cH)
+        #     plt.subplot(2, 2, 3)
+        #     plt.imshow(cV)
+        #     plt.subplot(2, 2, 4)
+        #     plt.imshow(cD)
+        #
+        #     plt.show()
+        #
+        # exit()
 
         n, x, y = np.array(approx).shape
         approx = np.array(approx).reshape((x, y, n))

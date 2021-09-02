@@ -38,7 +38,7 @@ class NeuralNetwork:
         print("Model fit ...")
 
         # Compile model
-        optimizer = Adam(learning_rate=0.002)
+        optimizer = Adam(learning_rate=0.001)
         self._model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
         # Callbacks definition
