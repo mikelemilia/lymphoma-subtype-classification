@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import pywt
 import tensorflow as tf
-from skimage.color import rgb2hsv, rgb2gray
-from skimage.feature import canny
-from skimage.filters import threshold_multiotsu, gaussian, threshold_otsu
+from skimage.color import rgb2hsv
+from skimage.exposure import equalize_adapthist
+from skimage.filters import gaussian
 from skimage.io import imread
 from skimage.transform import resize, rotate
 from skimage.util import random_noise
@@ -112,18 +112,15 @@ class Dataset:
         # Add the transformation for each image
         row = df.shape[0]
 
-        dataframe = pd.DataFrame(np.repeat(df.values, 12, axis=0))
+        dataframe = pd.DataFrame(np.repeat(df.values, 16, axis=0))
         dataframe.columns = df.columns
         df = dataframe
 
         transformation = [
+            '-',
             'V_FLIP', 'H_FLIP', 'R_NOISE',
-            'ROT_30', 'ROT_60', 'ROT_90',
-            # 'ROT_45', 'ROT_75', 'ROT_105',
-            'ROT_120', 'ROT_150', 'ROT_210',
-            # 'ROT_135', 'ROT_165', 'ROT_225',
-            'ROT_240', 'ROT_270', 'ROT_300',
-            # 'ROT_255', 'ROT_285', 'ROT_315'
+            'ROT_45', 'ROT_90', 'ROT_135', 'ROT_225', 'ROT_270', 'ROT_315',
+            'ROT_30', 'ROT_60', 'ROT_120', 'ROT_240', 'ROT_300', 'ROT_330',
         ]
 
         transformations = np.concatenate((transformation, transformation))
@@ -148,7 +145,9 @@ class Dataset:
 
         # Add the pair [row, col] for each patch
         names = ['row', 'col']
-        dims = [8, 10]
+        dims = [8, 10]  # patch 128 * 128
+        # dims = [16, 20]  # patch 64 * 64
+        # dims = [32, 40]  # patch 32* 32
         for k in range(2):
             row = df.shape[0]
 
@@ -192,7 +191,8 @@ class Dataset:
 
     def create_dataset(self, dataframe, loader, batch_size, shuffle: bool = False, split: int = 0):
 
-        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(
+            int)
 
         # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
         data_indexes = list(dataframe.index)
@@ -226,7 +226,8 @@ class Dataset:
     def create_dataset_nolabel(self, dataframe, loader, batch_size, shuffle: bool = False, split: int = 0):
         # Creation of the dataset of type data - data for autoencoders
 
-        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(
+            int)
         # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
         data_indexes_in = list(dataframe.index)
         for i in range(len(data_indexes_in)):
@@ -241,7 +242,8 @@ class Dataset:
         # necessary a feature is extracted with 'loader' (equal for both the data present)
         dataset = dataset.map(
             lambda index_in, index_out: (
-            tf.numpy_function(loader, [split, index_in], np.float32), tf.numpy_function(loader, [split, index_out], np.float32)),
+                tf.numpy_function(loader, [split, index_in], np.float32),
+                tf.numpy_function(loader, [split, index_out], np.float32)),
             num_parallel_calls=os.cpu_count()
         )
 
@@ -266,14 +268,12 @@ class Dataset:
             return self.load_patch_data
 
         # Select feature loader
-        if self._feature_extracted == 'BLOB':
-            return self.load_data_thresh
-        elif self._feature_extracted == 'PCA':
+        if self._feature_extracted == 'PCA':
             return self.load_data_pca
         elif self._feature_extracted == 'WAV':
             return self.load_data_wavelet
-        elif self._feature_extracted == 'CANNY':
-            return self.load_data_canny
+        elif self._feature_extracted == 'HE':
+            return self.load_data_equalized
 
     def load_data(self, split, index):
 
@@ -302,7 +302,7 @@ class Dataset:
         elif trans == 'H_FLIP':
             image = image[:, ::-1]
         elif trans == 'R_NOISE':
-            image = random_noise(image)
+            image = random_noise(image, )
         elif 'ROT' in trans.split('_')[0]:
             image = rotate(image, int(trans.split('_')[1]))
 
@@ -318,13 +318,13 @@ class Dataset:
 
         resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
 
+        # # Standardize pixel value in order to get mean 0 and standard deviation 1
+        # mean, std = resized.mean(), resized.std()
+        # resized = (resized - mean) / std
+
         # Normalize pixel values between [0, 1]
         if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-            resized /= 255.0
-
-        # Standardize pixel value in order to get mean 0 and standard deviation 1
-        mean, std = resized.mean(), resized.std()
-        resized = (resized - mean) / std
+            resized /= resized.max()
 
         return np.array(resized, dtype='float32')
 
@@ -354,89 +354,49 @@ class Dataset:
         # Convert image to array
         image = np.array(image, dtype='float32')
 
+        # # Standardize pixel value in order to get mean 0 and standard deviation 1
+        # mean, std = image.mean(), image.std()
+        # image = (image - mean) / std
+
         # Normalize pixel values between [0, 1]
         if self._color_space in ['RGB']:  # RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-            image /= 255.0
-
-        # Standardize pixel value in order to get mean 0 and standard deviation 1
-        mean, std = image.mean(), image.std()
-        image = (image - mean) / std
+            image /= image.max()
 
         # Extract the correct patch 128x128 from the image
         patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
+        # patch = image[(row - 1) * 64:(row * 64), (col - 1) * 64:(col * 64), :]
+        # patch = image[(row - 1) * 32:(row * 32), (col - 1) * 32:(col * 32), :]
 
         return np.array(patch, dtype='float32')
 
-    def load_data_canny(self, split, index):
+    def load_data_equalized(self, split, index):
 
         # print("Extracting CANNY feature from image #{}".format(index))
 
         image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
 
-        for i in range(image.shape[2]):
-            blur = gaussian(image[:, :, i], sigma=0.4, truncate=3.5)
-            low, high = threshold_multiotsu(image=blur)
-            image[:, :, i] = canny(blur, sigma=1, low_threshold=low, high_threshold=high)
+        blur = gaussian(image, sigma=0.4, truncate=3.5, multichannel=True)
+
+        if self._color_space == 'RGB':
+            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])
+            blur[:, :, 1] = equalize_adapthist(blur[:, :, 1])
+            blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])
+
+            # blur[:, :, 0] += canny(blur[:, :, 0], sigma=2)
+
+        elif self._color_space == 'HSV':
+            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])
+
+        else:
+            blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])
+
+        # plt.imshow(blur)
+        # plt.show()
+        # exit()
 
         return np.array(image, dtype='float32')
 
-    def load_data_thresh(self, split, index):
-
-        # print("Extracting BLOB feature from image #{}".format(index))
-
-        image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
-
-        if self._color_space == 'HSV':
-            gray = image[:, :, 2]  # V channel
-        elif self._color_space == 'RGB':
-            gray = rgb2gray(image)
-        else:
-            gray = image[:, :, 0]
-
-        thresh = threshold_otsu(image=gray)
-        binary = gray < thresh
-
-        # plt.figure(figsize=(10, 5))
-        #
-        # plt.subplot(2, 2, 1)
-        # plt.imshow(gray)
-        # plt.subplot(2, 2, 2)
-        # plt.imshow(binary)
-        # plt.show()
-
-        binary = np.expand_dims(binary, -1)
-
-        return np.array(binary, dtype='float32')
-
-    # def load_data_hog(self, split, index):
-    #
-    #     # print("Extracting BLOB feature from image #{}".format(index))
-    #     multi_channel = False
-    #
-    #     image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
-    #
-    #     if self._color_space in ['HSV', 'RGB']:
-    #         multi_channel = True
-    #     else:
-    #         image = image[:, :, 0]
-    #
-    #     features, hog_image = hog(image, orientations=9, pixels_per_cell=(16, 16), cells_per_block=(2, 2), visualize=True,
-    #                           multichannel=multi_channel)
-    #
-    #     plt.figure(figsize=(10, 5))
-    #
-    #     plt.subplot(2, 2, 1)
-    #     plt.imshow(image)
-    #     plt.subplot(2, 2, 2)
-    #     plt.imshow(hog_image)
-    #     plt.show()
-    #
-    #     print(features)
-    #     print(features.shape)
-    #     exit()
-    #     return np.array(features, dtype='float32')
-
-    def load_data_pca(self, split, index, components=64):
+    def load_data_pca(self, split, index, components=32):
 
         # print("Extracting PCA feature from image #{}".format(index))
         if self._mode == 'FULL':
@@ -445,12 +405,21 @@ class Dataset:
         else:
             image = self.load_patch_data(split, index)
 
-        # Extraction of the first 'components' principal components of the images
+        # Extraction of the first K PCs for each channel
         pc_image = np.zeros([image.shape[0], components, image.shape[2]])
+        x = np.zeros(image.shape, dtype='float32')
+
         for i in range(image.shape[2]):
-            pca = PCA(n_components=components)  # we need K principal components.
+            pca = PCA(n_components=components)
             pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
             # print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
+
+            # x[:, :, i] = pca.inverse_transform(pc_image[:, :, i])
+        # print(x.min(), x.max())
+        # plt.imshow(image)
+        # plt.imshow(x)
+        # plt.show()
+        # exit()
 
         return np.array(pc_image, dtype='float32')
 

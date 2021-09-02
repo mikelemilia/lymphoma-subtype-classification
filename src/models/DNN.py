@@ -1,7 +1,7 @@
 from .Network import NeuralNetwork
 
 from tensorflow.keras import Input, Model
-from tensorflow.keras.layers import Flatten, Dense
+from tensorflow.keras.layers import Flatten, Dense, Dropout
 
 
 class Deep(NeuralNetwork):
@@ -20,6 +20,7 @@ class Deep(NeuralNetwork):
 
         for i, units in enumerate(hidden_units):
             x = Dense(units=units, activation='relu', name='fc{}'.format(i))(x)
+            x = Dropout(rate=0.25)(x)
 
         x = Dense(units=self._classes, activation='softmax', name='fc')(x)
 

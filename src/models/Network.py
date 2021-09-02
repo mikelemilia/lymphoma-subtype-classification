@@ -2,9 +2,10 @@ import matplotlib.pyplot as plt
 import os
 import itertools
 import numpy as np
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix, roc_curve, auc, roc_auc_score
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam
 
 
 class NeuralNetwork:
@@ -37,24 +38,34 @@ class NeuralNetwork:
         print("Model fit ...")
 
         # Compile model
-        self._model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        optimizer = Adam(learning_rate=0.002)
+        self._model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
-        # Define callbacks
-        reduce_lr = ReduceLROnPlateau(monitor='val_accuracy', mode='max', patience=5, factor=0.1, min_lr=0.000001, verbose=1)
-        early_stop = EarlyStopping(monitor='val_accuracy', mode='max', patience=10, verbose=1)
+        # Callbacks definition
+        reduce_lr = ReduceLROnPlateau(monitor='val_categorical_accuracy', mode='max',
+                                      patience=5, factor=0.1, min_lr=0.00001,
+                                      verbose=1)
 
+        early_stop = EarlyStopping(monitor='val_categorical_accuracy', mode='max',
+                                   patience=10,
+                                   verbose=1)
+
+        # Fit model
         self._history = self._model.fit(
             train,
-            steps_per_epoch=steps[0],  # train steps
+            steps_per_epoch=steps[0],   # training steps
             epochs=num_epochs,
             validation_data=validation,
             validation_steps=steps[1],  # validation steps
             verbose=2,
-            callbacks=[reduce_lr, early_stop]
+            callbacks=[
+                reduce_lr,
+                early_stop
+            ]
         )
 
-        self.plot_learning_curve()
-        self.plot_accuracy_curve()
+        # Plot loss and accuracy curves
+        self.plot_curves()
 
     def save(self):
 
@@ -84,12 +95,11 @@ class NeuralNetwork:
             print('Images found : {}'.format(len(images)))
             images_pred = np.zeros((images.shape[0], 3))
 
-            print('Computing frequency prediction for each image')
+            print('Computing frequency prediction for each image patch ...')
             count = 0
             for i, image in images.iterrows():
-                # if count == 1:
-                #     break
-                print('\tImage {} : {}'.format(count, image['path']))
+
+                # print('\tImage {} : {}'.format(count, image['path']))
                 patches = dataframe.loc[dataframe['path'] == image['path']]
                 # print('\t\tPatch found : {}'.format(len(patches)))
 
@@ -102,12 +112,11 @@ class NeuralNetwork:
                     patches_pred[j % patches.shape[0], :] = one_hot_encode(patch)
 
                 prediction, frequency = np.unique(patches_pred, axis=0, return_counts=True)
-                print('\t\tPrediction :')
-                for h in range(prediction.shape[0]):
-                    print('\t\t\tClass {} : {}'.format(prediction[h], frequency[h]))
+                # print('\t\tPrediction :')
+                # for h in range(prediction.shape[0]):
+                #     print('\t\t\tClass {} : {}'.format(prediction[h], frequency[h]))
 
                 images_pred[count, :] = prediction[np.argmax(frequency)]
-                print(images_pred)
                 count += 1
 
                 labels = dataframe[['label_cll', 'label_fl', 'label_mcl']].iloc[::patches.shape[0], :]
@@ -138,25 +147,31 @@ class NeuralNetwork:
         print('Fscore: {:.2f}%'.format(fscore * 100))
 
     # Useful plot
-    def plot_accuracy_curve(self):
+    def plot_curves(self):
 
-        plt.plot(self._history.history['accuracy'], 'b', linewidth=3.0, label='Training accuracy')
-        plt.plot(self._history.history['val_accuracy'], 'r', linewidth=3.0, label='Validation accuracy')
-        plt.xlabel('Iteration', fontsize=16)
-        plt.ylabel('Accuracy rate', fontsize=16)
-        plt.legend()
-        plt.title('Training Accuracy', fontsize=16)
-        plt.savefig('plot/{}_training_accuracy.png'.format(self._name))
-        plt.close()
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig.suptitle('Curves')
 
-    def plot_learning_curve(self):
-        plt.plot(self._history.history['loss'], 'b', linewidth=3.0, label='Training loss')
-        plt.plot(self._history.history['val_loss'], 'r', linewidth=3.0, label='Validation loss')
-        plt.xlabel('Iteration', fontsize=16)
-        plt.ylabel('Loss', fontsize=16)
-        plt.legend()
-        plt.title('Learning Curve', fontsize=16)
-        plt.savefig('plot/{}_learning_curve.png'.format(self._name))
+        # Accuracy curve
+        ax1.plot(self._history.history['categorical_accuracy'], 'b', linewidth=3.0, label='Training accuracy')
+        ax1.plot(self._history.history['val_categorical_accuracy'], 'r', linewidth=3.0, label='Validation accuracy')
+        ax1.set_xlabel('Iteration', fontsize=16)
+        ax1.set_ylabel('Accuracy rate', fontsize=16)
+        ax1.legend()
+        ax1.set_title('Accuracy', fontsize=16)
+
+        # Learning curve
+        ax2.plot(self._history.history['loss'], 'b', linewidth=3.0, label='Training loss')
+        ax2.plot(self._history.history['val_loss'], 'r', linewidth=3.0, label='Validation loss')
+        ax2.set_xlabel('Iteration', fontsize=16)
+        ax2.set_ylabel('Loss', fontsize=16)
+        ax2.legend()
+        ax2.set_title('Learning', fontsize=16)
+
+        plt.show()
+
+        # Save plot and close
+        plt.savefig('plot/{}_curves.png'.format(self._name))
         plt.close()
 
     def plot_confusion_matrix(self, cm, classes,

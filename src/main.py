@@ -52,8 +52,8 @@ def parse_input():
     else:
         c = str(args.color).upper()
 
-    if str(args.extra).upper() not in ['-', 'CANNY', 'PCA', 'WAV', 'BLOB']:
-        print('You must select a valid feature extraction. Valid options are: CANNY, PCA, WAV, BLOB', file=sys.stderr)
+    if str(args.extra).upper() not in ['-', 'HE', 'PCA', 'WAV']:
+        print('You must select a valid feature extraction. Valid options are: HE, PCA, WAV.', file=sys.stderr)
         exit(-1)
     else:
         e = str(args.extra).upper()
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     data = None
     patched = False
     batch_size = None
-    num_epochs = 50
+    num_epochs = 100
 
     if mode == 'FULL':
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         test = dataset.generate_patch_dataframe(split=2, name='test')
 
         patched = True
-        batch_size = 32
+        batch_size = 64
 
         # print('\nPatched training set : {} images'.format(len(train)))
         # print('Patched validation set  : {} images'.format(len(val)))
@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
         if not model.is_loaded:
             model.build()
-            model.fit(train=train_dataset_nolabel, validation=val_dataset_nolabel, num_epochs=num_epochs,
+            model.fit(train=train_dataset_nolabel, validation=val_dataset_nolabel, num_epochs=1,
                       steps=[len(train) // batch_size, len(val) // batch_size])
             model.save()
 

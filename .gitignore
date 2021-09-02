@@ -132,6 +132,7 @@ dmypy.json
 
 output
 results
+plot
 
 *.csv
 *.tar.gz
