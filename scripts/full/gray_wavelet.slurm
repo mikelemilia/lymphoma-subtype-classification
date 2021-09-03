@@ -19,7 +19,7 @@
 DIRECTORY=/nfsd/hda/miliamikel/lymph
 DATA=/nfsd/hda/DATASETS/Project_6
 
-# make my folder the current directory
+# make my folder tCANNY current directory
 cd $DIRECTORY
 
 # setup python3 environment for machine learning computations 
@@ -37,5 +37,5 @@ echo ""
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c GRAY -m FULL -e WAV --train
 srun python $DIRECTORY/src/main.py -f $DATA -a DNN -c GRAY -m FULL -e WAV
 
-# deactivate environment at the end of the job
+# deactivate environment at tCANNY end of tCANNY job
 conda deactivate

@@ -52,8 +52,8 @@ def parse_input():
     else:
         c = str(args.color).upper()
 
-    if str(args.extra).upper() not in ['-', 'HE', 'PCA', 'WAV']:
-        print('You must select a valid feature extraction. Valid options are: HE, PCA, WAV.', file=sys.stderr)
+    if str(args.extra).upper() not in ['-', 'CANNY', 'PCA', 'WAV']:
+        print('You must select a valid feature extraction. Valid options are: CANNY, PCA, WAV.', file=sys.stderr)
         exit(-1)
     else:
         e = str(args.extra).upper()

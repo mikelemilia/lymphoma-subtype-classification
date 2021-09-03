@@ -1,8 +1,9 @@
-import matplotlib.pyplot as plt
-import os
 import itertools
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix, roc_curve, auc, roc_auc_score
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
@@ -149,7 +150,7 @@ class NeuralNetwork:
     # Useful plot
     def plot_curves(self):
 
-        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 30))
         fig.suptitle('Curves')
 
         # Accuracy curve

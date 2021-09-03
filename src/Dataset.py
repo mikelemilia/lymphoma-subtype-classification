@@ -6,9 +6,10 @@ import numpy as np
 import pandas as pd
 import pywt
 import tensorflow as tf
-from skimage.color import rgb2hsv
+from skimage.color import rgb2hsv, hsv2rgb, rgb2gray
 from skimage.exposure import equalize_adapthist
-from skimage.filters import gaussian
+from skimage.filters import gaussian, threshold_otsu, threshold_multiotsu
+from skimage.feature import canny, local_binary_pattern
 from skimage.io import imread
 from skimage.transform import resize, rotate
 from skimage.util import random_noise
@@ -272,8 +273,41 @@ class Dataset:
             return self.load_data_pca
         elif self._feature_extracted == 'WAV':
             return self.load_data_wavelet
-        elif self._feature_extracted == 'HE':
-            return self.load_data_equalized
+        elif self._feature_extracted == 'CANNY':
+            return self.load_data_canny
+
+    def preprocessing(self, image):
+
+        # Remove noise through gaussian filtering
+        filtered = gaussian(image, sigma=0.4, truncate=3.5, multichannel=True)
+
+        # Scale pixel values : [0, 255] -> [0, 1]
+        filtered /= 255.0
+
+        # Perform Contrastive Limited Adaptive Histogram Equalization - CLAHE
+        if self._color_space == "RGB":
+
+            hsv = rgb2hsv(filtered)
+            hsv[:, :, 2] = equalize_adapthist(hsv[:, :, 2], clip_limit=0.03)  # Value
+            filtered = hsv2rgb(hsv)
+
+        elif self._color_space == "GRAY":
+
+            # Histogram equalization - CLAHE
+            gray = rgb2gray(filtered)
+            gray = equalize_adapthist(gray, clip_limit=0.03)
+            filtered = np.expand_dims(gray, axis=-1)  # Shape must be (X, Y, C)
+
+        elif self._color_space == "HSV":
+
+            # Histogram equalization - CLAHE
+            hsv = rgb2hsv(filtered)
+
+            hsv[:, :, 1] = equalize_adapthist(hsv[:, :, 1], clip_limit=0.03)  # Saturation
+            hsv[:, :, 2] = equalize_adapthist(hsv[:, :, 2], clip_limit=0.03)  # Value
+            filtered = hsv
+
+        return filtered
 
     def load_data(self, split, index):
 
@@ -286,41 +320,35 @@ class Dataset:
         if isinstance(path, bytes):
             path = path.decode()
 
-        # Load the image the image
-        image = None
-        if self._color_space == "RGB":
-            image = imread(path)
-        elif self._color_space == "GRAY":
-            image = imread(path, as_gray=True)
-            image = np.expand_dims(image, axis=-1)
-        elif self._color_space == "HSV":
-            image = imread(path)
-            image = rgb2hsv(image)
-
-        if trans == 'V_FLIP':
-            image = image[::-1, :]
-        elif trans == 'H_FLIP':
-            image = image[:, ::-1]
-        elif trans == 'R_NOISE':
-            image = random_noise(image, )
-        elif 'ROT' in trans.split('_')[0]:
-            image = rotate(image, int(trans.split('_')[1]))
+        # Load image
+        image = imread(path)
 
         # Convert image to array
         image = np.array(image, dtype='float32')
 
-        # Resize
+        # Preprocess
+        filtered = self.preprocessing(image)
+
+        # Perform data augmentation
+        if trans == 'V_FLIP':
+            filtered = filtered[::-1, :]
+        elif trans == 'H_FLIP':
+            filtered = filtered[:, ::-1]
+        elif trans == 'R_NOISE':
+            filtered = random_noise(filtered, )
+        elif 'ROT' in trans.split('_')[0]:
+            filtered = rotate(filtered, int(trans.split('_')[1]))
+
+        # Resize image of a scale factor
         scale_factor = 0.3
-        height = int(image.shape[0] * scale_factor)
-        width = int(image.shape[1] * scale_factor)
+        height = int(filtered.shape[0] * scale_factor)
+        width = int(filtered.shape[1] * scale_factor)
 
-        resized_shape = (height, width, image.shape[2])
+        resized = resize(image=filtered, output_shape=(height, width, filtered.shape[2]), preserve_range=True, anti_aliasing=True)
 
-        resized = resize(image=image, output_shape=resized_shape, preserve_range=True, anti_aliasing=True)
-
-        # Scale pixel values : RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-        if self._color_space in ['RGB']:
-            resized /= 255.0
+        # Standardize pixel value in order to get mean 0 and standard deviation 1
+        mean, std = resized.mean(), resized.std()
+        resized = (resized - mean) / std
 
         return np.array(resized, dtype='float32')
 
@@ -337,57 +365,38 @@ class Dataset:
             path = path.decode()
 
         # Load the image the image
-        image = None
-        if self._color_space == "RGB":
-            image = imread(path)
-        elif self._color_space == "GRAY":
-            image = imread(path, as_gray=True)
-            image = np.expand_dims(image, axis=-1)
-        elif self._color_space == "HSV":
-            image = imread(path)
-            image = rgb2hsv(image)
+        image = imread(path)
 
         # Convert image to array
         image = np.array(image, dtype='float32')
 
-        # Scale pixel values : RGB [0, 255] | HSV [0, 1] | GRAY [0, 1]
-        if self._color_space in ['RGB']:
-            image /= 255.0
+        filtered = self.preprocessing(image)
+
+        # Standardize pixel value in order to get mean 0 and standard deviation 1
+        mean, std = filtered.mean(), filtered.std()
+        filtered = (filtered - mean) / std
 
         # Extract the correct patch 128x128 from the image
-        patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
+        patch = filtered[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
         # patch = image[(row - 1) * 64:(row * 64), (col - 1) * 64:(col * 64), :]
         # patch = image[(row - 1) * 32:(row * 32), (col - 1) * 32:(col * 32), :]
 
         return np.array(patch, dtype='float32')
 
-    def load_data_equalized(self, split, index):
+    def load_data_canny(self, split, index):
 
         # print("Extracting CANNY feature from image #{}".format(index))
 
         image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
 
-        blur = gaussian(image, sigma=0.4, truncate=3.5, multichannel=True)
+        for i in range(image.shape[2]):
+            low, high = threshold_multiotsu(image=image[:,:,i])
+            image[:, :, i] = canny(image[:,:,i], sigma=1, low_threshold=low, high_threshold=high)
 
-        if self._color_space == 'RGB':
-            blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])   # Blue
-            blur[:, :, 1] = equalize_adapthist(blur[:, :, 1])   # Green
-            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])   # Red
-
-            # blur[:, :, 0] += canny(blur[:, :, 0], sigma=2)
-
-        elif self._color_space == 'HSV':
-            blur[:, :, 1] = equalize_adapthist(blur[:, :, 1])   # Saturation
-            blur[:, :, 2] = equalize_adapthist(blur[:, :, 2])   # Value
-
-        else:
-            blur[:, :, 0] = equalize_adapthist(blur[:, :, 0])
-
-        # plt.imshow(blur)
+        # plt.imshow(image[:,:,0])
         # plt.show()
         # exit()
-
-        return np.array(image, dtype='float32')
+        return image
 
     def load_data_pca(self, split, index, components=32):
 
@@ -397,10 +406,6 @@ class Dataset:
             components = 128
         else:
             image = self.load_patch_data(split, index)
-
-        # Standardize pixel value in order to get mean 0 and standard deviation 1
-        mean, std = image.mean(), image.std()
-        image = (image - mean) / std
 
         # Extraction of the first K PCs for each channel
         pc_image = np.zeros([image.shape[0], components, image.shape[2]])
