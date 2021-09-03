@@ -8,7 +8,7 @@ class Deep(NeuralNetwork):
 
     def __init__(self, name, classes, shape, batch_size=32, patched_image: bool = False):
 
-        super().__init__('deep_' + name, classes, shape, batch_size, patched_image)
+        super().__init__('DNN_' + name, classes, shape, batch_size, patched_image)
 
     def build(self, hidden_units):
 

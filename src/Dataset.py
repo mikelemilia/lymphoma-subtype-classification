@@ -307,7 +307,11 @@ class Dataset:
             hsv[:, :, 2] = equalize_adapthist(hsv[:, :, 2], clip_limit=0.03)  # Value
             filtered = hsv
 
-        return filtered
+        # Standardize pixel value in order to get mean 0 and standard deviation 1
+        mean, std = filtered.mean(), filtered.std()
+        filtered = (filtered - mean) / std
+
+        return np.array(filtered, dtype='float32')
 
     def load_data(self, split, index):
 
@@ -326,8 +330,15 @@ class Dataset:
         # Convert image to array
         image = np.array(image, dtype='float32')
 
+        # Resize image of a scale factor
+        scale_factor = 0.3
+        height = int(image.shape[0] * scale_factor)
+        width = int(image.shape[1] * scale_factor)
+
+        resized = resize(image=image, output_shape=(height, width, image.shape[2]), preserve_range=True, anti_aliasing=True)
+
         # Preprocess
-        filtered = self.preprocessing(image)
+        filtered = self.preprocessing(resized)
 
         # Perform data augmentation
         if trans == 'V_FLIP':
@@ -339,18 +350,7 @@ class Dataset:
         elif 'ROT' in trans.split('_')[0]:
             filtered = rotate(filtered, int(trans.split('_')[1]))
 
-        # Resize image of a scale factor
-        scale_factor = 0.3
-        height = int(filtered.shape[0] * scale_factor)
-        width = int(filtered.shape[1] * scale_factor)
-
-        resized = resize(image=filtered, output_shape=(height, width, filtered.shape[2]), preserve_range=True, anti_aliasing=True)
-
-        # Standardize pixel value in order to get mean 0 and standard deviation 1
-        mean, std = resized.mean(), resized.std()
-        resized = (resized - mean) / std
-
-        return np.array(resized, dtype='float32')
+        return np.array(filtered, dtype='float32')
 
     def load_patch_data(self, split, index):
 
@@ -370,18 +370,14 @@ class Dataset:
         # Convert image to array
         image = np.array(image, dtype='float32')
 
-        filtered = self.preprocessing(image)
-
-        # Standardize pixel value in order to get mean 0 and standard deviation 1
-        mean, std = filtered.mean(), filtered.std()
-        filtered = (filtered - mean) / std
-
         # Extract the correct patch 128x128 from the image
-        patch = filtered[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
+        patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
         # patch = image[(row - 1) * 64:(row * 64), (col - 1) * 64:(col * 64), :]
         # patch = image[(row - 1) * 32:(row * 32), (col - 1) * 32:(col * 32), :]
 
-        return np.array(patch, dtype='float32')
+        filtered = self.preprocessing(patch)
+
+        return np.array(filtered, dtype='float32')
 
     def load_data_canny(self, split, index):
 
@@ -396,7 +392,7 @@ class Dataset:
         # plt.imshow(image[:,:,0])
         # plt.show()
         # exit()
-        return image
+        return np.array(image, dtype='float32')
 
     def load_data_pca(self, split, index, components=32):
 

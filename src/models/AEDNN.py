@@ -14,11 +14,11 @@ class AutoEncoder(NeuralNetwork):
 
     def __init__(self, name, classes, shape, batch_size=32, code_size=512, patched_image: bool = False):
 
-        super().__init__('ae_' + name, classes, shape, batch_size, patched_image)
+        super().__init__('AE_' + name, classes, shape, batch_size, patched_image)
 
         self._code_size = code_size
 
-        self._name_deep = 'ae_deep_' + name
+        self._name_deep = 'AEDNN_' + name
         self._output_deep = 'output/{}.h5'.format(self._name_deep)
 
         self._encoder = None

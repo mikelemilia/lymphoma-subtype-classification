@@ -8,7 +8,7 @@ class DeepConvolutional(NeuralNetwork):
 
     def __init__(self, name, classes, shape, batch_size=32, patched_image: bool = False):
 
-        super().__init__('deep_cnn_' + name, classes, shape, batch_size, patched_image)
+        super().__init__('DCNN_' + name, classes, shape, batch_size, patched_image)
 
     def build(self):
 
