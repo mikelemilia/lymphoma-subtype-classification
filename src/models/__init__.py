@@ -1,5 +1,5 @@
 from models.CNN import Convolutional as CNN
-from models.DCNN import DeepConvolutional as DCNN
-from models.DNN import Deep as DNN
-from models.AEDNN import AutoEncoder as AEDNN
-
+from models.CNNv1 import CNNv1
+from models.CNNv2 import CNNv2
+from models.CNNv3 import CNNv3
+from models.CNNv4 import CNNv4

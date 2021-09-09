@@ -6,10 +6,9 @@ import numpy as np
 import pandas as pd
 import pywt
 import tensorflow as tf
-from skimage.color import rgb2hsv, hsv2rgb, rgb2gray
-from skimage.exposure import equalize_adapthist
-from skimage.filters import gaussian, threshold_otsu, threshold_multiotsu
-from skimage.feature import canny, local_binary_pattern
+from skimage.color import rgb2hsv, rgb2gray
+from skimage.feature import canny
+from skimage.filters import threshold_multiotsu
 from skimage.io import imread
 from skimage.transform import resize, rotate
 from skimage.util import random_noise
@@ -21,7 +20,7 @@ from tqdm import tqdm
 
 class Dataset:
 
-    def __init__(self, folder, mode, color_space, feature, is_training: bool = False):
+    def __init__(self, folder, mode, color_space, feature, is_training: bool = False, patch_size=128):
 
         # Parameter
         self._folder = os.path.join(os.getcwd(), folder)
@@ -29,6 +28,8 @@ class Dataset:
         self._color_space = color_space
         self._feature_extracted = feature
         self._is_training = is_training
+
+        self._patch_size = patch_size
 
         # print('Selected folder : {}'.format(self._folder))
         # print('Selected mode : {}'.format(self._mode))
@@ -110,26 +111,28 @@ class Dataset:
         # Get dataframe
         df = self.get_split(split)
 
-        # Add the transformation for each image
-        row = df.shape[0]
+        if name not in ['test']:
 
-        dataframe = pd.DataFrame(np.repeat(df.values, 16, axis=0))
-        dataframe.columns = df.columns
-        df = dataframe
+            # Add the transformation for each image
+            row = df.shape[0]
 
-        transformation = [
-            '-',
-            'V_FLIP', 'H_FLIP', 'R_NOISE',
-            'ROT_45', 'ROT_90', 'ROT_135', 'ROT_225', 'ROT_270', 'ROT_315',
-            'ROT_30', 'ROT_60', 'ROT_120', 'ROT_240', 'ROT_300', 'ROT_330',
-        ]
+            dataframe = pd.DataFrame(np.repeat(df.values, 16, axis=0))
+            dataframe.columns = df.columns
+            df = dataframe
 
-        transformations = np.concatenate((transformation, transformation))
+            transformation = [
+                '-',
+                'V_FLIP', 'H_FLIP', 'R_NOISE',
+                'ROT_45', 'ROT_90', 'ROT_135', 'ROT_225', 'ROT_270', 'ROT_315',
+                'ROT_30', 'ROT_60', 'ROT_120', 'ROT_240', 'ROT_300', 'ROT_330',
+            ]
 
-        for i in range(row - 2):
-            transformations = np.concatenate((transformations, transformation))
+            transformations = np.concatenate((transformation, transformation))
 
-        df['transformation'] = transformations
+            for i in range(row - 2):
+                transformations = np.concatenate((transformations, transformation))
+
+            df['transformation'] = transformations
 
         # Save dataframe
         df.to_csv('augmented_{}_dataframe.csv'.format(name))
@@ -144,11 +147,18 @@ class Dataset:
         # Get dataframe
         df = self.get_split(split)
 
-        # Add the pair [row, col] for each patch
+        # Column names
         names = ['row', 'col']
-        dims = [8, 10]  # patch 128 * 128
-        # dims = [16, 20]  # patch 64 * 64
-        # dims = [32, 40]  # patch 32* 32
+
+        # Number of vertical and horizontal split
+        dims = [None, None]
+
+        # Patch will cover an area of 1024 * 1288 pixels w.r.t. 1040 * 1388
+        if self._patch_size == 128:
+            dims = [8, 10]
+        elif self._patch_size == 64:
+            dims = [16, 20]  # patch 64 * 64
+
         for k in range(2):
             row = df.shape[0]
 
@@ -192,8 +202,7 @@ class Dataset:
 
     def create_dataset(self, dataframe, loader, batch_size, shuffle: bool = False, split: int = 0):
 
-        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(
-            int)
+        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(int)
 
         # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
         data_indexes = list(dataframe.index)
@@ -224,42 +233,6 @@ class Dataset:
 
         return dataset
 
-    def create_dataset_nolabel(self, dataframe, loader, batch_size, shuffle: bool = False, split: int = 0):
-        # Creation of the dataset of type data - data for autoencoders
-
-        dataframe[['label_cll', 'label_fl', 'label_mcl']] = dataframe[['label_cll', 'label_fl', 'label_mcl']].astype(
-            int)
-        # Extraction of data indexes of from the dataframe and labels (depending on the label names passed in input)
-        data_indexes_in = list(dataframe.index)
-        for i in range(len(data_indexes_in)):
-            data_indexes_in[i] = str(data_indexes_in[i])
-
-        data_indexes_out = data_indexes_in
-
-        # Creation of the dataset with indexes and label
-        dataset = tf.data.Dataset.from_tensor_slices((data_indexes_in, data_indexes_out))
-
-        # Application of the function passed in input to every data index (from the index, data is extracted and if
-        # necessary a feature is extracted with 'loader' (equal for both the data present)
-        dataset = dataset.map(
-            lambda index_in, index_out: (
-                tf.numpy_function(loader, [split, index_in], np.float32),
-                tf.numpy_function(loader, [split, index_out], np.float32)),
-            num_parallel_calls=os.cpu_count()
-        )
-
-        # Operations for shuffling and batching of the dataset
-        if shuffle:
-            dataset = dataset.shuffle(len(data_indexes_in))
-
-        if self._is_training:
-            dataset = dataset.repeat()
-
-        dataset = dataset.batch(batch_size=batch_size)
-        dataset = dataset.prefetch(buffer_size=1)
-
-        return dataset
-
     def select_loader(self):
 
         # Select no-feature loader
@@ -278,40 +251,23 @@ class Dataset:
 
     def preprocessing(self, image):
 
-        # Remove noise through gaussian filtering
-        filtered = gaussian(image, sigma=0.4, truncate=3.5, multichannel=True)
-
         # Scale pixel values : [0, 255] -> [0, 1]
-        filtered /= 255.0
+        image /= 255.0
 
-        # Perform Contrastive Limited Adaptive Histogram Equalization - CLAHE
-        if self._color_space == "RGB":
+        if self._color_space == "GRAY":
 
-            hsv = rgb2hsv(filtered)
-            hsv[:, :, 2] = equalize_adapthist(hsv[:, :, 2], clip_limit=0.03)  # Value
-            filtered = hsv2rgb(hsv)
-
-        elif self._color_space == "GRAY":
-
-            # Histogram equalization - CLAHE
-            gray = rgb2gray(filtered)
-            gray = equalize_adapthist(gray, clip_limit=0.03)
-            filtered = np.expand_dims(gray, axis=-1)  # Shape must be (X, Y, C)
+            gray = rgb2gray(image)
+            image = np.expand_dims(gray, axis=-1)  # Shape must be (X, Y, C)
 
         elif self._color_space == "HSV":
 
-            # Histogram equalization - CLAHE
-            hsv = rgb2hsv(filtered)
-
-            hsv[:, :, 1] = equalize_adapthist(hsv[:, :, 1], clip_limit=0.03)  # Saturation
-            hsv[:, :, 2] = equalize_adapthist(hsv[:, :, 2], clip_limit=0.03)  # Value
-            filtered = hsv
+            image = rgb2hsv(image)
 
         # Standardize pixel value in order to get mean 0 and standard deviation 1
-        mean, std = filtered.mean(), filtered.std()
-        filtered = (filtered - mean) / std
+        mean, std = image.mean(), image.std()
+        image = (image - mean) / std
 
-        return np.array(filtered, dtype='float32')
+        return np.array(image, dtype='float32')
 
     def load_data(self, split, index):
 
@@ -330,12 +286,7 @@ class Dataset:
         # Convert image to array
         image = np.array(image, dtype='float32')
 
-        # Resize image of a scale factor
-        scale_factor = 0.3
-        height = int(image.shape[0] * scale_factor)
-        width = int(image.shape[1] * scale_factor)
-
-        resized = resize(image=image, output_shape=(height, width, image.shape[2]), preserve_range=True, anti_aliasing=True)
+        resized = resize(image=image, output_shape=(512, 512, image.shape[2]), preserve_range=True, anti_aliasing=True)
 
         # Preprocess
         filtered = self.preprocessing(resized)
@@ -371,9 +322,7 @@ class Dataset:
         image = np.array(image, dtype='float32')
 
         # Extract the correct patch 128x128 from the image
-        patch = image[(row - 1) * 128:(row * 128), (col - 1) * 128:(col * 128), :]
-        # patch = image[(row - 1) * 64:(row * 64), (col - 1) * 64:(col * 64), :]
-        # patch = image[(row - 1) * 32:(row * 32), (col - 1) * 32:(col * 32), :]
+        patch = image[(row - 1) * self._patch_size:(row * self._patch_size), (col - 1) * self._patch_size:(col * self._patch_size), :]
 
         filtered = self.preprocessing(patch)
 
@@ -386,12 +335,9 @@ class Dataset:
         image = self.load_data(split, index) if self._mode == 'FULL' else self.load_patch_data(split, index)
 
         for i in range(image.shape[2]):
-            low, high = threshold_multiotsu(image=image[:,:,i])
-            image[:, :, i] = canny(image[:,:,i], sigma=1, low_threshold=low, high_threshold=high)
+            low, high = threshold_multiotsu(image=image[:, :, i])
+            image[:, :, i] = canny(image[:, :, i], sigma=1, low_threshold=low, high_threshold=high)
 
-        # plt.imshow(image[:,:,0])
-        # plt.show()
-        # exit()
         return np.array(image, dtype='float32')
 
     def load_data_pca(self, split, index, components=32):
@@ -410,8 +356,8 @@ class Dataset:
         for i in range(image.shape[2]):
             pca = PCA(n_components=components)
             pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
-            # print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
-
+        #     print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
+        #
         #     x[:, :, i] = pca.inverse_transform(pc_image[:, :, i])
         # print(x.min(), x.max())
         # plt.imshow(x)
@@ -448,6 +394,8 @@ class Dataset:
         #     plt.imshow(cD)
         #
         #     plt.show()
+        #
+        # print(np.array(approx).shape)
         #
         # exit()
 

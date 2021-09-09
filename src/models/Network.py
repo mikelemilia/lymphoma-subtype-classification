@@ -1,9 +1,10 @@
 import itertools
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, confusion_matrix
+
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
@@ -34,7 +35,23 @@ class NeuralNetwork:
     def build(self, *args):
         pass
 
-    def fit(self, train, validation, num_epochs, steps: list):
+    def shortcut(self, input_block, residual_block, depth=1):
+
+        from tensorflow.keras.layers import Add, Conv2D, Reshape
+
+        input_shape = input_block.shape
+        residual_shape = residual_block.shape
+
+        equal_channels = input_shape[3] == residual_shape[3]
+
+        shortcut = input_block
+        if not equal_channels:
+            for i in range(depth):
+                shortcut = Conv2D(filters=residual_shape[3], kernel_size=(1, 1), strides=(2, 2), activation='relu', padding="same")(shortcut)
+
+        return Add()([shortcut, residual_block])
+
+    def fit(self, train, validation, num_epochs, steps: list, patience_lr=5, patience_es=10):
 
         print("Model fit ...")
 
@@ -43,13 +60,13 @@ class NeuralNetwork:
         self._model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
         # Callbacks definition
-        reduce_lr = ReduceLROnPlateau(monitor='val_categorical_accuracy', mode='max',
-                                      patience=5, factor=0.1, min_lr=0.00001,
-                                      verbose=1)
+        reduce_lr = ReduceLROnPlateau(
+            monitor='val_categorical_accuracy', mode='max',
+            factor=0.1, min_lr=0.0000001, patience=patience_lr, verbose=1)
 
-        early_stop = EarlyStopping(monitor='val_categorical_accuracy', mode='max',
-                                   patience=10,
-                                   verbose=1)
+        early_stop = EarlyStopping(
+            monitor='val_categorical_accuracy', mode='max',
+            patience=patience_es, verbose=1, restore_best_weights=True)
 
         # Fit model
         self._history = self._model.fit(
@@ -124,6 +141,8 @@ class NeuralNetwork:
 
         else:  # input is directly full image
 
+            test = dataframe.loc[dataframe['transformation'] == '-']
+
             # Extract labels of test set, predict them with the model
             images_pred = self._model.predict(test)
             images_pred = one_hot_encode(images_pred)
@@ -150,7 +169,7 @@ class NeuralNetwork:
     # Useful plot
     def plot_curves(self):
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 30))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(30, 15))
         fig.suptitle('Curves')
 
         # Accuracy curve
@@ -168,7 +187,6 @@ class NeuralNetwork:
         ax2.set_ylabel('Loss', fontsize=16)
         ax2.legend()
         ax2.set_title('Learning', fontsize=16)
-
         plt.show()
 
         # Save plot and close

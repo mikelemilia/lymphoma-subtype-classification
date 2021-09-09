@@ -1,18 +1,16 @@
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 
-from tensorflow.keras.regularizers import L1
-
 from .Network import NeuralNetwork
 
 
-class Convolutional(NeuralNetwork):
+class CNNv1(NeuralNetwork):
 
     def __init__(self, name, classes, shape, batch_size=32, patched_image: bool = False):
 
-        super().__init__('CNN_' + name, classes, shape, batch_size, patched_image)
+        super().__init__('CNNv1_' + name, classes, shape, batch_size, patched_image)
 
-    def build(self, hidden_units:list):
+    def build(self, hidden_units: list):
 
         print("Model build ...")
 
@@ -28,6 +26,11 @@ class Convolutional(NeuralNetwork):
         x = MaxPooling2D(pool_size=2, name='MP64')(x)
         x = Dropout(rate=0.25, name='D64')(x)
 
+        # Layer with 128x128 Conv2D
+        x = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', activation='relu', padding='same', name='C128')(x)
+        x = MaxPooling2D(pool_size=2, name='MP128')(x)
+        x = Dropout(rate=0.25, name='D128')(x)
+
         x = Flatten()(x)
 
         for i, units in enumerate(hidden_units):
@@ -40,3 +43,7 @@ class Convolutional(NeuralNetwork):
 
         # Check model
         self._model.summary()
+
+    def fit(self, train, validation, num_epochs, steps: list, patience_lr=5, patience_es=10):
+
+        super().fit(train, validation, num_epochs, steps, patience_lr=10, patience_es=20)
