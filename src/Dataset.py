@@ -111,28 +111,26 @@ class Dataset:
         # Get dataframe
         df = self.get_split(split)
 
-        if name not in ['test']:
+        # Add the transformation for each image
+        row = df.shape[0]
 
-            # Add the transformation for each image
-            row = df.shape[0]
+        dataframe = pd.DataFrame(np.repeat(df.values, 16, axis=0))
+        dataframe.columns = df.columns
+        df = dataframe
 
-            dataframe = pd.DataFrame(np.repeat(df.values, 16, axis=0))
-            dataframe.columns = df.columns
-            df = dataframe
+        transformation = [
+            '-',
+            'V_FLIP', 'H_FLIP', 'R_NOISE',
+            'ROT_45', 'ROT_90', 'ROT_135', 'ROT_225', 'ROT_270', 'ROT_315',
+            'ROT_30', 'ROT_60', 'ROT_120', 'ROT_240', 'ROT_300', 'ROT_330',
+        ]
 
-            transformation = [
-                '-',
-                'V_FLIP', 'H_FLIP', 'R_NOISE',
-                'ROT_45', 'ROT_90', 'ROT_135', 'ROT_225', 'ROT_270', 'ROT_315',
-                'ROT_30', 'ROT_60', 'ROT_120', 'ROT_240', 'ROT_300', 'ROT_330',
-            ]
+        transformations = np.concatenate((transformation, transformation))
 
-            transformations = np.concatenate((transformation, transformation))
+        for i in range(row - 2):
+            transformations = np.concatenate((transformations, transformation))
 
-            for i in range(row - 2):
-                transformations = np.concatenate((transformations, transformation))
-
-            df['transformation'] = transformations
+        df['transformation'] = transformations
 
         # Save dataframe
         df.to_csv('augmented_{}_dataframe.csv'.format(name))

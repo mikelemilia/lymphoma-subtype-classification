@@ -13,6 +13,7 @@
 #SBATCH -t 3-00:00:00
 #SBATCH --mem 75G
 
+#SBATCH -w gpu3
 #SBATCH --gres=gpu:1
 
 # setup my personal/shared project folder

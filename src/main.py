@@ -92,7 +92,7 @@ if __name__ == '__main__':
     data = None
     patched = False
     batch_size = None
-    num_epochs = 500
+    num_epochs = 250
 
     if mode == 'FULL':
 

@@ -23,86 +23,86 @@ DATA=/nfsd/hda/DATASETS/Project_6
 cd $DIRECTORY
 
 # run code
-echo "--------------------------------------------------------------------"
-echo "Running CNN RGB"
-echo ""
+#echo "--------------------------------------------------------------------"
+#echo "Running CNN RGB"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH
 
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH --train
+#echo "--------------------------------------------------------------------"
+#echo "Running CNN RGB WAV"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e WAV --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e WAV
 
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH
-
-echo "--------------------------------------------------------------------"
-echo "Running CNN RGB WAV"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e WAV --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e WAV
-
-echo "--------------------------------------------------------------------"
-echo "Running CNN RGB CANNY"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e CANNY --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e CANNY
+#echo "--------------------------------------------------------------------"
+#echo "Running CNN RGB CANNY"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e CANNY --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNN -c RGB -m PATCH -e CANNY
 
 ########################################################################################################################
-echo "--------------------------------------------------------------------"
-echo "Running CNNv1 RGB"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH
-
-echo "--------------------------------------------------------------------"
-echo "Running CNNv1 RGB WAV"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH -e WAV --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH -e WAV
+#echo "--------------------------------------------------------------------"
+#echo "Running CNNv1 RGB"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH
+#
+#echo "--------------------------------------------------------------------"
+#echo "Running CNNv1 RGB WAV"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH -e WAV --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH -e WAV
 
 echo "--------------------------------------------------------------------"
 echo "Running CNNv1 RGB CANNY"
@@ -121,21 +121,21 @@ singularity exec --nv \
                  python $DIRECTORY/src/main.py -f $DATA -a CNNv1 -c RGB -m PATCH -e CANNY
 
 ########################################################################################################################
-echo "--------------------------------------------------------------------"
-echo "Running CNNv2 RGB"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv2 -c RGB -m PATCH --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv2 -c RGB -m PATCH
+#echo "--------------------------------------------------------------------"
+#echo "Running CNNv2 RGB"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv2 -c RGB -m PATCH --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv2 -c RGB -m PATCH
 
 echo "--------------------------------------------------------------------"
 echo "Running CNNv2 RGB WAV"
@@ -170,21 +170,21 @@ singularity exec --nv \
                  python $DIRECTORY/src/main.py -f $DATA -a CNNv2 -c RGB -m PATCH -e CANNY
 
 ########################################################################################################################
-echo "--------------------------------------------------------------------"
-echo "Running CNNv3 RGB"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv3 -c RGB -m PATCH --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv3 -c RGB -m PATCH
+#echo "--------------------------------------------------------------------"
+#echo "Running CNNv3 RGB"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv3 -c RGB -m PATCH --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv3 -c RGB -m PATCH
 
 echo "--------------------------------------------------------------------"
 echo "Running CNNv3 RGB WAV"
@@ -219,21 +219,21 @@ singularity exec --nv \
                  python $DIRECTORY/src/main.py -f $DATA -a CNNv3 -c RGB -m PATCH -e CANNY
 
 ########################################################################################################################
-echo "--------------------------------------------------------------------"
-echo "Running CNNv4 RGB"
-echo ""
-
-# Train
-srun singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv4 -c RGB -m PATCH --train
-
-# Prediction
-singularity exec --nv \
-                 --bind $DATA --bind $DIRECTORY \
-                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
-                 python $DIRECTORY/src/main.py -f $DATA -a CNNv4 -c RGB -m PATCH
+#echo "--------------------------------------------------------------------"
+#echo "Running CNNv4 RGB"
+#echo ""
+#
+## Train
+#srun singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv4 -c RGB -m PATCH --train
+#
+## Prediction
+#singularity exec --nv \
+#                 --bind $DATA --bind $DIRECTORY \
+#                 /nfsd/opt/sif-images/tensorflow_latest-gpu.sif \
+#                 python $DIRECTORY/src/main.py -f $DATA -a CNNv4 -c RGB -m PATCH
 
 echo "--------------------------------------------------------------------"
 echo "Running CNNv4 RGB WAV"

@@ -18,19 +18,19 @@ class CNNv2(NeuralNetwork):
 
         # Layer with 32x32 Conv2D
         a = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', activation='relu', padding='same', name='C32')(x_input)
-        a = MaxPooling2D(pool_size=2, name='MP32')(a)
+        a = MaxPooling2D(pool_size=2, padding='same', name='MP32')(a)
         a = Dropout(rate=0.25, name='D32')(a)
 
         # Layer with 64x64 Conv2D
         b = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', activation='relu', padding='same', name='C64')(a)
-        b = MaxPooling2D(pool_size=2, name='MP64')(b)
+        b = MaxPooling2D(pool_size=2, padding='same', name='MP64')(b)
         b = Dropout(rate=0.25, name='D64')(b)
 
         b = self.shortcut(input_block=a, residual_block=b)
 
         # Layer with 128x128 Conv2D
         c = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), data_format='channels_last', activation='relu', padding='same', name='C128')(b)
-        c = MaxPooling2D(pool_size=2, name='MP128')(c)
+        c = MaxPooling2D(pool_size=2, padding='same', name='MP128')(c)
         c = Dropout(rate=0.25, name='D128')(c)
 
         c = self.shortcut(input_block=b, residual_block=c)

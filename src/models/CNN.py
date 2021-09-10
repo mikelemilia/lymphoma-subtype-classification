@@ -1,8 +1,6 @@
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 
-from tensorflow.keras.regularizers import L1
-
 from .Network import NeuralNetwork
 
 
@@ -12,7 +10,7 @@ class Convolutional(NeuralNetwork):
 
         super().__init__('CNN_' + name, classes, shape, batch_size, patched_image)
 
-    def build(self, hidden_units:list):
+    def build(self, hidden_units: list):
 
         print("Model build ...")
 

@@ -37,7 +37,7 @@ class NeuralNetwork:
 
     def shortcut(self, input_block, residual_block, depth=1):
 
-        from tensorflow.keras.layers import Add, Conv2D, Reshape
+        from tensorflow.keras.layers import Add, Conv2D
 
         input_shape = input_block.shape
         residual_shape = residual_block.shape
@@ -140,8 +140,6 @@ class NeuralNetwork:
                 labels = dataframe[['label_cll', 'label_fl', 'label_mcl']].iloc[::patches.shape[0], :]
 
         else:  # input is directly full image
-
-            test = dataframe.loc[dataframe['transformation'] == '-']
 
             # Extract labels of test set, predict them with the model
             images_pred = self._model.predict(test)
