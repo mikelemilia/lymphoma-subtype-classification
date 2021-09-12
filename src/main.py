@@ -17,11 +17,11 @@ def parse_input():
 
     # Add arguments
     parser.add_argument('-f', '--folder', type=str, default='data', help='dataset folder path')
-    parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, DNN, D-CNN, AE-DNN')
+    parser.add_argument('-a', '--arch', type=str, default='CNN', help='architecture, it can be CNN, CNNv1, CNNv2, CNNv3, CNNv4')
     parser.add_argument('-m', '--mode', type=str, default='FULL', help='preprocessing mode, it can be FULL or PATCH')
-    parser.add_argument('-s', '--size', type=int, default=128, help='preprocessing mode, it can be 128, 64, 32')
+    parser.add_argument('-s', '--size', type=int, default=128, help='preprocessing mode, it can be 128')
     parser.add_argument('-c', '--color', type=str, default='RGB', help='color space used, it can be RGB, GRAY, HSV')
-    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, PCA, WAV, BLOB')
+    parser.add_argument('-e', '--extra', type=str, default='-', help='extracted features, it can be CANNY, WAV')
     parser.add_argument('--train', action='store_true')
 
     # Retrieve arguments value
@@ -53,7 +53,7 @@ def parse_input():
     else:
         c = str(args.color).upper()
 
-    if str(args.extra).upper() not in ['-', 'CANNY', 'PCA', 'WAV']:
+    if str(args.extra).upper() not in ['-', 'CANNY', 'WAV']:
         print('You must select a valid feature extraction. Valid options are: CANNY, PCA, WAV.', file=sys.stderr)
         exit(-1)
     else:
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     model = None
 
     # Check selected architecture
-    if architecture in ['CNN', 'CNNv1', 'CNNv2', 'CNNv3', 'CNNv4', 'CNNv5', 'CNNv6', 'CNNv7']:
+    if architecture in ['CNN', 'CNNv1', 'CNNv2', 'CNNv3', 'CNNv4']:
 
         model = globals()[architecture](name=name, classes=3, shape=input_size, batch_size=batch_size, patched_image=patched)
 

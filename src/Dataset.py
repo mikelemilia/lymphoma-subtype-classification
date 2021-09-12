@@ -151,11 +151,12 @@ class Dataset:
         # Number of vertical and horizontal split
         dims = [None, None]
 
-        # Patch will cover an area of 1024 * 1288 pixels w.r.t. 1040 * 1388
         if self._patch_size == 128:
+            # Patch will cover an area of 1024 * 1288 pixels w.r.t. 1040 * 1388
             dims = [8, 10]
-        elif self._patch_size == 64:
-            dims = [16, 20]  # patch 64 * 64
+        else:
+            print("Patch dimension not yet supported!")
+            exit(-1)
 
         for k in range(2):
             row = df.shape[0]
@@ -334,35 +335,9 @@ class Dataset:
 
         for i in range(image.shape[2]):
             low, high = threshold_multiotsu(image=image[:, :, i])
-            image[:, :, i] = canny(image[:, :, i], sigma=1, low_threshold=low, high_threshold=high)
+            image[:, :, i] = canny(image[:, :, i], sigma=2, low_threshold=low, high_threshold=high)
 
         return np.array(image, dtype='float32')
-
-    def load_data_pca(self, split, index, components=32):
-
-        # print("Extracting PCA feature from image #{}".format(index))
-        if self._mode == 'FULL':
-            image = self.load_data(split, index)
-            components = 128
-        else:
-            image = self.load_patch_data(split, index)
-
-        # Extraction of the first K PCs for each channel
-        pc_image = np.zeros([image.shape[0], components, image.shape[2]])
-        # x = np.zeros(image.shape, dtype='float32')
-
-        for i in range(image.shape[2]):
-            pca = PCA(n_components=components)
-            pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
-        #     print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
-        #
-        #     x[:, :, i] = pca.inverse_transform(pc_image[:, :, i])
-        # print(x.min(), x.max())
-        # plt.imshow(x)
-        # plt.show()
-        # exit()
-
-        return np.array(pc_image, dtype='float32')
 
     def load_data_wavelet(self, split, index):
 
@@ -380,46 +355,45 @@ class Dataset:
             cA, (cH, cV, cD) = pywt.dwt2(image[:, :, channel], 'sym5')
             approx.append(cA)
 
-        #     plt.figure(figsize=(30, 30))
-        #
-        #     plt.subplot(2, 2, 1)
-        #     plt.imshow(cA)
-        #     plt.subplot(2, 2, 2)
-        #     plt.imshow(cH)
-        #     plt.subplot(2, 2, 3)
-        #     plt.imshow(cV)
-        #     plt.subplot(2, 2, 4)
-        #     plt.imshow(cD)
-        #
-        #     plt.show()
-        #
-        # print(np.array(approx).shape)
-        #
-        # exit()
+            # plt.figure(figsize=(30, 30))
+            #
+            # plt.subplot(2, 2, 1)
+            # plt.imshow(cA)
+            # plt.subplot(2, 2, 2)
+            # plt.imshow(cH)
+            # plt.subplot(2, 2, 3)
+            # plt.imshow(cV)
+            # plt.subplot(2, 2, 4)
+            # plt.imshow(cD)
+
+            # plt.show()
 
         n, x, y = np.array(approx).shape
         approx = np.array(approx).reshape((x, y, n))
 
         return np.array(approx, dtype='float32')
 
-    def random_plot(self):
+    def load_data_pca(self, split, index, components=32):
 
-        fig = plt.figure(figsize=(15, 15))
-        cols = 3
-        rows = 3
+        # print("Extracting PCA feature from image #{}".format(index))
+        if self._mode == 'FULL':
 
-        # ax enables access to manipulate each of subplots
-        ax = []
+            image = self.load_data(split, index)
+            components = 128
 
-        for i in range(cols * rows):
-            k = np.random.randint(len(self._dataframe['path']))
+        else:
 
-            # create subplot and append to ax
-            ax.append(fig.add_subplot(rows, cols, i + 1))
-            ax[-1].text(0.47, 2, str(self._classes[k]), color='green')
-            ax[-1].set_title("Class: " + str(self._classes[k]))  # set title
+            image = self.load_patch_data(split, index)
 
-            image = imread(self._dataframe['path'][k])
-            plt.imshow(image)
+        # Extraction of the first K PCs for each channel
+        pc_image = np.zeros([image.shape[0], components, image.shape[2]])
+        # x = np.zeros(image.shape, dtype='float32')
 
-        plt.show()  # finally, render the plot
+        for i in range(image.shape[2]):
+            pca = PCA(n_components=components)
+            pc_image[:, :, i] = pca.fit_transform(image[:, :, i])
+            # print(f"Channel {i}: {sum(pca.explained_variance_ratio_)}")
+            # x[:, :, i] = pca.inverse_transform(pc_image[:, :, i])
+
+        return np.array(pc_image, dtype='float32')
+
